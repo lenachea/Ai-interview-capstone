@@ -1,0 +1,71 @@
+# ────────────────────────────────────────────────────────────────
+#  PreView — 전체 모노레포 .gitignore
+# ────────────────────────────────────────────────────────────────
+
+# ── 환경 변수 / 시크릿 ──────────────────────────────────────────
+.env
+.env.*
+*.key
+
+# ── Python ──────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# 가상환경
+venv/
+venv_cap/
+.venv/
+env/
+.conda/
+
+# ── Node / 프론트엔드 ────────────────────────────────────────────
+Cap_Frontend/node_modules/
+Cap_Frontend/dist/
+Cap_Frontend/dist.zip
+Cap_Frontend/.vite/
+
+# ── 백엔드 런타임 데이터 (업로드 파일·로컬 DB) ─────────────────
+backend/jobs/
+backend/results_db.json
+
+# ── verbal_module 데이터·모델 (용량 큰 바이너리/데이터셋) ───────────
+verbal_module/data/wavs/
+verbal_module/data/labels/
+verbal_module/data/raw_answers.txt
+verbal_module/data/corpus.txt
+verbal_module/results/
+verbal_module/models/
+verbal_module/temp.py
+
+# 학습된 모델 가중치
+*.pt
+*.bin
+*.ckpt
+*.pkl
+*.safetensors
+
+# 오디오 / 영상 원본
+*.wav
+*.mp3
+*.mp4
+*.webm
+*.ogg
+*.flac
+*.m4a
+
+# ── OS 메타데이터 ────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDE ─────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.user

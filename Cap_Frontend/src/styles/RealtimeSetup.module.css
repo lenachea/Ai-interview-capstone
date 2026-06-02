@@ -1,0 +1,330 @@
+.container {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background-color: var(--color-bg);
+  overflow: hidden;
+  padding: 40px 20px 60px;
+}
+
+.gradientMint {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 150px;
+  height: 100%;
+  /* 왼쪽은 민트색, 오른쪽은 투명하게 */
+  background: linear-gradient(
+    to right,
+    var(--color-accent-light-mint),
+    transparent
+  );
+  border-radius: 0 8px 8px 0;
+  opacity: 0.9;
+}
+
+.gradientBlue {
+position: absolute;
+  right: 0;
+  top: 0;
+  width: 150px;
+  height: 100%;
+  /* 오른쪽(블루)에서 왼쪽(투명)으로 부드럽게 전환 */
+  background: linear-gradient(
+    to left,
+    var(--color-accent-light-blue),
+    transparent
+  );
+  border-radius: 8px 0 0 8px;
+  opacity: 0.9;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  z-index: 1;
+  width: 100%;
+  max-width: 1200px;
+}
+
+/* ── 2열 그리드 (좌: 장치 카드, 우: 안내 패널) ── */
+.mainGrid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 24px;
+  width: 100%;
+  align-items: start;
+}
+
+.deviceSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 우측 컬럼: 안내 패널 + 버튼을 세로로 쌓음 */
+.rightColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 20px;
+  align-self: start;
+}
+
+/* ── 면접 준비 안내 패널 ── */
+.guidancePanel {
+  background: white;
+  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.guidanceTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.guidanceList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.guidanceItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.guidanceItemHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.guidanceIcon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.guidanceItemTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.guidanceTips {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 26px;
+}
+
+.guidanceTips li {
+  font-size: 13px;
+  color: var(--color-text-light);
+  line-height: 1.5;
+  position: relative;
+}
+
+.guidanceTips li::before {
+  content: '·';
+  position: absolute;
+  left: -12px;
+  color: var(--color-green);
+  font-weight: 700;
+}
+
+.pageHeader {
+  text-align: center;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 8px;
+}
+
+.desc {
+  font-size: 15px;
+  color: var(--color-text-light);
+}
+
+/* ── 카드 공통 ── */
+.cameraCard,
+.micCard {
+  width: 100%;
+  background: white;
+  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.cardLabelRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cardIcon {
+  width: 20px;
+  height: 20px;
+  color: var(--color-text-light);
+}
+
+.cardLabel {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.statusBadge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── 웹캠 ── */
+.videoWrap {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);   /* 좌우 반전 (거울 효과) */
+}
+
+.videoPlaceholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  color: #666;
+}
+
+.videoPlaceholder svg {
+  width: 64px;
+  height: 64px;
+}
+
+.videoPlaceholder span {
+  font-size: 14px;
+  color: #999;
+  text-align: center;
+  white-space: pre-line;
+  line-height: 1.6;
+}
+
+/* ── 마이크 ── */
+.volumeWrap {
+  padding: 16px 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.volumeCanvas {
+  width: 100%;
+  height: 70px;
+  border-radius: 8px;
+  background: #f7f9fc;
+  display: block;
+}
+
+.volumeHint {
+  font-size: 12px;
+  color: #aaa;
+  text-align: center;
+}
+
+.micPlaceholder {
+  padding: 20px;
+  font-size: 13px;
+  color: #f07070;
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ── 버튼 ── */
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.startBtn {
+  width: 100%;
+  padding: 14px;
+  border-radius: var(--radius-btn);
+  background: linear-gradient(135deg, var(--color-green), var(--color-blue));
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+}
+
+.startBtn:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+.startBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.backBtn {
+  background: none;
+  color: var(--color-text-light);
+  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+.backBtn:hover {
+  background: #f0f0f0;
+}

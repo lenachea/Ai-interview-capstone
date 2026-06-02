@@ -1,0 +1,41 @@
+:root {
+  --color-blue: #5BB8F5;
+  --color-green: #4eeb8f;
+  --color-dark-green: #3dd198;
+  --color-bg: #FFFFFF;
+  --color-text: #333333;
+  --color-text-light: #666666;
+  --color-accent-light-mint: #c9f8d7;
+  --color-accent-light-blue: #c6f1fc;
+  --font-main: 'Noto Sans KR', sans-serif;
+  --radius-btn: 20px;
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-main), sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
