@@ -1,0 +1,96 @@
+.card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
+  padding: 24px;
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.iconWrap {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-accent-light-mint);
+  border-radius: 12px;
+  color: var(--color-green);
+  flex-shrink: 0;
+}
+
+.iconWrap svg {
+  width: 28px;
+  height: 28px;
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.deviceName {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.statusBadge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* 웹캠 미리보기 */
+.preview {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: #f0f0f0;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.previewPlaceholder {
+  font-size: 13px;
+  color: #999;
+  text-align: center;
+  line-height: 1.6;
+  white-space: pre-line;
+  padding: 12px;
+}
+
+.deniedMsg {
+  font-size: 13px;
+  color: #f07070;
+  line-height: 1.5;
+}
