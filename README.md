@@ -10,8 +10,12 @@
 | 분류 | 항목 | 설명 |
 |------|------|------|
 | 언어 분석 | 음성 인식 | Whisper 기반 STT |
-| 언어 분석 | 답변 품질 | 명확성·논리성·키워드 분석 |
+| 언어 분석 | 화자 분리 | pyannote.audio — 면접자 발화 구간 추출 |
 | 언어 분석 | 필러 감지 | "음", "어" 등 불필요한 추임새 탐지 |
+| 언어 분석 | 말속도 | 분당 음절 수 측정 |
+| 언어 분석 | 운율·음량 | librosa 기반 음량 안정성 분석 |
+| 언어 분석 | 일시정지 | 침묵 구간 감지 및 분석 |
+| 언어 분석 | 말더듬 | 반복·막힘 탐지 |
 | 비언어 분석 | 표정 분석 | HSEmotion(enet_b2_8) — 8가지 감정 분류 |
 | 비언어 분석 | 시선 분석 | MediaPipe Face Landmarker — 시선 방향 & 이탈 구간 |
 | 비언어 분석 | 상반신 자세 | MediaPipe Pose — 자세 안정성 분석 |
@@ -21,29 +25,52 @@
 ## 프로젝트 구조
 
 ```
-├── backend/                # FastAPI 서버
-│   ├── main.py             # API 엔드포인트
-│   ├── preprocessor.py     # 영상 → 오디오/프레임 분리
-│   ├── scorer.py           # 점수 계산
+├── backend/                    # FastAPI 서버
+│   ├── main.py                 # API 엔드포인트
+│   ├── preprocessor.py         # 영상 → 오디오/프레임 분리
+│   ├── scorer.py               # 점수 계산
+│   ├── qa_splitter.py          # 질문-답변 구간 분리
+│   ├── questions.py            # 고정 면접 질문 목록
 │   └── requirements.txt
 │
-├── verbal_module/          # 언어 분석 모듈
+├── verbal_module/              # 언어 분석 모듈
 │   ├── main.py
+│   ├── api.py
+│   ├── models.py
 │   ├── filler_detector.py
+│   ├── ngram_model.py
+│   ├── prepare_corpus.py
 │   ├── analyzers/
+│   │   ├── transcriber.py      # Whisper STT
+│   │   ├── diarization.py      # 화자 분리 (pyannote.audio)
+│   │   ├── filler_analyzer.py  # 필러 분석
+│   │   ├── pause_analyzer.py   # 침묵 구간 분석
+│   │   ├── prosody_analyzer.py # 운율·음량 분석 (librosa)
+│   │   ├── speech_rate.py      # 말속도 분석
+│   │   └── stutter_analyzer.py # 말더듬 분석
 │   └── requirements.txt
 │
-├── nonverbal_language/     # 비언어 분석 모듈
+├── nonverbal_language/         # 비언어 분석 모듈
 │   ├── expresssion/
-│   │   └── emotion_feature_final.py   # 표정 분석 (JSON 출력)
+│   │   ├── emotion_feature_final.py   # 표정 분석 (JSON 출력)
+│   │   └── Dan.py
 │   ├── eyecontact/
 │   │   └── eye.py                     # 시선 분석 (JSON 출력)
-│   └── face_landmarker.task           # MediaPipe 모델
+│   ├── face_landmarker.task           # MediaPipe 얼굴 모델
+│   ├── pose_landmarker.task           # MediaPipe 자세 모델
+│   ├── blaze_face_short_range.tflite  # 얼굴 감지 모델
+│   ├── facial_expression.ipynb        # 표정 분석 실험
+│   ├── facial_expression_affectnet.ipynb
+│   └── upper_body_position.ipynb      # 자세 분석 실험
 │
-└── Cap_Frontend/           # React 프론트엔드
+├── Cap_Frontend/               # React 프론트엔드 (최신)
+│   └── src/
+│       ├── pages/
+│       └── components/
+│
+└── frontend/                   # React 프론트엔드 (이전)
     └── src/
-        ├── pages/
-        └── components/
+        └── pages/
 ```
 
 ---
@@ -127,5 +154,7 @@ npm run dev
 
 - **Backend**: FastAPI, Python
 - **STT**: OpenAI Whisper
+- **화자 분리**: pyannote.audio
+- **음성 분석**: librosa
 - **비언어 분석**: MediaPipe, HSEmotion, OpenCV
 - **Frontend**: React, Vite, Chart.js
