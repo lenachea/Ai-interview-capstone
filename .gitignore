@@ -8,6 +8,7 @@ nonverbal_language/data/
 **/*.onnx
 **/*.task
 !nonverbal_language/face_landmarker.task
+!nonverbal_language/pose_landmarker.task
 
 # Python
 __pycache__/
