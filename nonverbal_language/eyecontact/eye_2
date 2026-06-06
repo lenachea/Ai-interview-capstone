@@ -1,0 +1,245 @@
+import cv2
+import numpy as np
+import os
+import glob
+import torch
+import mediapipe as mp
+from l2cs import Pipeline
+from pathlib import Path
+from mediapipe.tasks import python
+from mediapipe.tasks.python import vision
+
+L2CS_MODEL   = Path("/workspace/models/L2CSNet_gaze360.pkl")
+MP_MODEL     = "/workspace/CSM/nonverbal_language/face_landmarker.task"
+BLINK_THRESH = 0.35  # eyeBlink blendshape 임계값
+
+def _create_pipeline():
+    return Pipeline(
+        weights=L2CS_MODEL,
+        arch="ResNet50",
+        device=torch.device("cpu")
+    )
+
+def _create_blink_detector():
+    base_options = python.BaseOptions(model_asset_path=MP_MODEL)
+    options = vision.FaceLandmarkerOptions(
+        base_options=base_options,
+        output_face_blendshapes=True,
+        output_facial_transformation_matrixes=False,
+        num_faces=1
+    )
+    return vision.FaceLandmarker.create_from_options(options)
+
+def detect_blink(blink_detector, frame_rgb):
+    """eyeBlinkLeft/Right blendshape로 깜빡임 감지. True=blink"""
+    mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)
+    result = blink_detector.detect(mp_image)
+    if not result.face_blendshapes:
+        return False
+    bs = {b.category_name: b.score for b in result.face_blendshapes[0]}
+    blink = (bs.get("eyeBlinkLeft", 0) + bs.get("eyeBlinkRight", 0)) / 2
+    return blink > BLINK_THRESH
+
+def analyze_gaze_l2cs(pitch, yaw):
+    """
+    pitch: 양수=아래, 음수=위
+    yaw:   양수=오른쪽, 음수=왼쪽
+
+    상하(pitch)를 먼저 체크해서 우선 감지.
+    """
+    pitch = float(pitch)
+    yaw   = float(yaw)
+
+    PITCH_THRESH = 0.30  # 상하 이탈 기준
+    YAW_THRESH   = 0.35  # 좌우 이탈 기준
+
+    if pitch < -PITCH_THRESH:
+        return "up"
+    elif pitch > PITCH_THRESH:
+        return "down"
+    elif yaw < -YAW_THRESH:
+        return "left"
+    elif yaw > YAW_THRESH:
+        return "right"
+    else:
+        return "center"
+
+def analyze_frames_gaze(frames_dir, fps=1, img_ext="*.jpg"):
+    frame_files = sorted(glob.glob(os.path.join(frames_dir, img_ext)))
+    if not frame_files:
+        frame_files = sorted(glob.glob(os.path.join(frames_dir, "*.png")))
+    if not frame_files:
+        print(f"[ERROR] 프레임 이미지를 찾을 수 없습니다: {frames_dir}")
+        return []
+
+    print(f"[INFO] 총 {len(frame_files)}개 프레임 발견")
+
+    pipeline       = _create_pipeline()
+    blink_detector = _create_blink_detector()
+    gaze_log = []
+
+    for frame_idx, frame_path in enumerate(frame_files):
+        current_time = round(frame_idx / fps, 2)
+        frame = cv2.imread(frame_path)
+        if frame is None:
+            print(f"[WARN] 읽기 실패: {frame_path}")
+            continue
+
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        # 깜빡임 먼저 확인
+        if detect_blink(blink_detector, rgb):
+            gaze_log.append({
+                "time": current_time,
+                "direction": "blink",
+                "pitch": 0.0,
+                "yaw":   0.0,
+            })
+            continue
+
+        try:
+            results = pipeline.step(frame)
+            if results.pitch is not None and len(results.pitch) > 0:
+                direction = analyze_gaze_l2cs(results.pitch[0], results.yaw[0])
+                gaze_log.append({
+                    "time": current_time,
+                    "direction": direction,
+                    "pitch": round(float(results.pitch[0]), 3),
+                    "yaw":   round(float(results.yaw[0]), 3),
+                })
+            else:
+                print(f"[WARN] 얼굴 미감지: {os.path.basename(frame_path)}")
+        except Exception as e:
+            print(f"[WARN] 오류: {os.path.basename(frame_path)} → {e}")
+
+    return gaze_log
+
+def summarize_gaze(gaze_log):
+    total = len(gaze_log)
+    if total == 0:
+        return {}
+
+    directions = ["left", "right", "up", "down", "blink"]
+    center_count = sum(1 for g in gaze_log if g["direction"] == "center")
+    center_ratio = center_count / total
+
+    direction_counts = {d: sum(1 for g in gaze_log if g["direction"] == d) for d in directions}
+    direction_ratios = {d: round(c / total, 2) for d, c in direction_counts.items()}
+
+    deviated_segments = []
+    seg_start = None
+
+    for i, g in enumerate(gaze_log):
+        if g["direction"] != "center" and seg_start is None:
+            seg_start = g["time"]
+        elif g["direction"] == "center" and seg_start is not None:
+            deviated_segments.append({
+                "start": seg_start,
+                "end": gaze_log[i - 1]["time"],
+                "direction": gaze_log[i - 1]["direction"]
+            })
+            seg_start = None
+
+    if seg_start is not None:
+        deviated_segments.append({
+            "start": seg_start,
+            "end": gaze_log[-1]["time"],
+            "direction": gaze_log[-1]["direction"]
+        })
+
+    if center_ratio >= 0.8:
+        feedback = "시선 처리 안정적"
+    elif center_ratio >= 0.6:
+        feedback = "가끔 시선 이탈"
+    else:
+        feedback = "시선 회피 빈번 — 자신감 부족으로 보일 수 있음"
+
+    return {
+        "gaze_ratio": round(center_ratio, 2),
+        "direction_ratios": direction_ratios,
+        "feedback": feedback,
+        "deviated_segments": deviated_segments
+    }
+
+def make_grid(frames_dir, out_path, gaze_log, thumb_w=200, cols=8, img_ext="*.jpg"):
+    DIR_COLOR = {
+        "center": (0, 200, 0),
+        "left":   (0, 0, 220),
+        "right":  (220, 100, 0),
+        "up":     (220, 0, 220),
+        "down":   (0, 220, 220),
+        "blink":  (150, 150, 150),
+        "none":   (80, 80, 80),
+    }
+    LABEL_H = 28
+
+    files = sorted(glob.glob(os.path.join(frames_dir, img_ext)))
+    if not files:
+        files = sorted(glob.glob(os.path.join(frames_dir, "*.png")))
+    if not files:
+        print("[ERROR] 그리드 만들 이미지 없음")
+        return
+
+    direction_map = {i: g["direction"] for i, g in enumerate(gaze_log)}
+
+    thumbs = []
+    for idx, f in enumerate(files):
+        img = cv2.imread(f)
+        if img is None:
+            continue
+        h, w = img.shape[:2]
+        thumb_h = int(thumb_w * h / w)
+        thumb = cv2.resize(img, (thumb_w, thumb_h))
+
+        direction = direction_map.get(idx, "none")
+        color = DIR_COLOR[direction]
+
+        cv2.rectangle(thumb, (0, 0), (thumb_w - 1, thumb_h - 1), color, 4)
+
+        label_bar = np.zeros((LABEL_H, thumb_w, 3), dtype=np.uint8)
+        label_bar[:] = color
+        g = gaze_log[idx] if idx < len(gaze_log) else {}
+        pitch_val = g.get("pitch", 0)
+        text = f"#{idx} {direction.upper()} p={pitch_val:.2f}"
+        cv2.putText(label_bar, text, (4, 20),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1)
+
+        cell = np.vstack([thumb, label_bar])
+        thumbs.append(cell)
+
+    cell_h = thumbs[0].shape[0]
+    rows = (len(thumbs) + cols - 1) // cols
+    blank = np.zeros((cell_h, thumb_w, 3), dtype=np.uint8)
+    while len(thumbs) % cols != 0:
+        thumbs.append(blank)
+
+    grid_rows = [np.hstack(thumbs[i * cols:(i + 1) * cols]) for i in range(rows)]
+    grid = np.vstack(grid_rows)
+    cv2.imwrite(out_path, grid)
+    print(f"[완료] 그리드 저장 → {out_path}")
+
+
+# ============ 실행 ============
+# 사용법:
+#   python eye_2                        # 기본 경로
+#   python eye_2 /workspace/framesss   # 경로 지정
+if __name__ == "__main__":
+    import sys
+
+    FRAMES_DIR = sys.argv[1] if len(sys.argv) > 1 else "/workspace/framesss"
+    GRID_PATH  = os.path.join(FRAMES_DIR, "../gaze_grid_l2cs.jpg")
+
+    gaze_log = analyze_frames_gaze(FRAMES_DIR, fps=1)
+    result   = summarize_gaze(gaze_log)
+
+    print(f"\n분석된 프레임 수: {len(gaze_log)}")
+    print(f"시선 중앙 비율:   {result.get('gaze_ratio', 0) * 100:.1f}%")
+    ratios = result.get("direction_ratios", {})
+    print(f"방향별 비율:      좌={ratios.get('left',0)*100:.1f}%  우={ratios.get('right',0)*100:.1f}%  위={ratios.get('up',0)*100:.1f}%  아래={ratios.get('down',0)*100:.1f}%  깜빡임={ratios.get('blink',0)*100:.1f}%")
+    print(f"피드백:           {result.get('feedback', '')}")
+    print(f"\n이탈 구간 ({len(result.get('deviated_segments', []))}개):")
+    for seg in result.get("deviated_segments", []):
+        print(f"  {seg['start']}s ~ {seg['end']}s → {seg['direction']}")
+
+    print("\n그리드 생성 중...")
+    make_grid(FRAMES_DIR, GRID_PATH, gaze_log, thumb_w=200, cols=8)
