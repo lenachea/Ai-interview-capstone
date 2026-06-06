@@ -1,121 +1,15 @@
-# ────────────────────────────────────────────────────────────────
-#  PreView — 전체 모노레포 .gitignore
-# ────────────────────────────────────────────────────────────────
+# Data
+nonverbal_language/data/
 
-# ── 환경 변수 / 시크릿 ──────────────────────────────────────────
-.env
-.env.*
-.envrc
-*.key
+# Model files
+**/*.pth
+**/*.pt
+**/*.bin
+**/*.onnx
+**/*.task
 
-# ── Python ──────────────────────────────────────────────────────
+# Python
 __pycache__/
-*.py[codz]
-*$py.class
-*.so
+*.pyc
 *.pyo
-*.pyd
-*.egg-info/
-*.egg
-MANIFEST
-.eggs/
-build/
-dist/
-develop-eggs/
-downloads/
-eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-.installed.cfg
-
-# 가상환경
-venv/
-venv_cap/
-.venv/
-env/
-env.bak/
-venv.bak/
-ENV/
-.conda/
-.pixi/
-__pypackages__/
-
-# 테스트 / 커버리지
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py.cover
-.hypothesis/
-.pytest_cache/
-cover/
-
-# 타입 체커
-.mypy_cache/
-.dmypy.json
-dmypy.json
-.pyre/
-.pytype/
-cython_debug/
-.ruff_cache/
-.pdm-python
-.pdm-build/
-
-# ── Node / 프론트엔드 ────────────────────────────────────────────
-Cap_Frontend/node_modules/
-Cap_Frontend/dist/
-Cap_Frontend/dist.zip
-Cap_Frontend/.vite/
-
-# ── 백엔드 런타임 데이터 ────────────────────────────────────────
-backend/jobs/
-backend/results_db.json
-
-# ── verbal_module 데이터·모델 ───────────────────────────────────
-verbal_module/data/wavs/
-verbal_module/data/labels/
-verbal_module/data/raw_answers.txt
-verbal_module/data/corpus.txt
-verbal_module/results/
-verbal_module/models/
-verbal_module/temp.py
-
-# 학습된 모델 가중치
-*.pt
-*.bin
-*.ckpt
-*.pkl
-*.safetensors
-
-# 오디오 / 영상 원본
-*.wav
-*.mp3
-*.mp4
-*.webm
-*.ogg
-*.flac
-*.m4a
-
-# ── OS 메타데이터 ────────────────────────────────────────────────
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# ── IDE ─────────────────────────────────────────────────────────
-.vscode/
-.idea/
-*.suo
-*.user
-.spyderproject
-.spyproject
-.ropeproject
+.env
