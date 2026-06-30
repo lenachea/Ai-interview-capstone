@@ -197,23 +197,6 @@ function CorrectionImageSlot({ url }) {
   )
 }
 
-function PendingSection({ title, color }) {
-  return (
-    <section className={styles.section}>
-      <h3 className={styles.sectionTitle}>
-        <span className={styles.sectionDot} style={{ background: color }} />
-        {title}
-      </h3>
-      <div style={{
-        padding: '24px 0', textAlign: 'center',
-        color: '#aaa', fontSize: 14,
-        border: '1.5px dashed #e0e0e0', borderRadius: 12,
-      }}>
-        비언어모듈 연결 후 표시됩니다
-      </div>
-    </section>
-  )
-}
 
 export default function ResultsDetail() {
   const navigate    = useNavigate()
@@ -227,6 +210,16 @@ export default function ResultsDetail() {
   const raw                = lang.raw_data || {}
   const answers            = compareData?.current?.answers || []
   const displayTranscript  = compareData?.current?.corrected_transcript || raw.transcript || ''
+
+  // ── 비언어 분석 데이터 ───────────────────────────────────────────────────
+  const nv              = compareData?.current?.nonverbal_analysis || {}
+  const nvStatus        = nv.status || null
+  const gazeSummary     = nv.gaze_summary || {}
+  const exprSummary     = nv.expression_summary || {}
+  const postureSummary  = nv.posture_summary || {}
+  const gazeDeductions  = nv.gaze_deductions || []
+  const postureDeductions = nv.posture_deductions || []
+  const hasNvData       = nvStatus === 'success' || nvStatus === 'partial'
 
   const radarValues  = SCORE_LABELS.map(({ key }) => scores[key] ?? 0)
   const validScores  = SCORE_LABELS.map(({ key }) => scores[key]).filter(v => v != null)
@@ -350,22 +343,208 @@ export default function ResultsDetail() {
       <main className={styles.rightPanel}>
         <h2 className={styles.rightTitle}>상세 분석 결과</h2>
 
-        {/* ── 표정 분석 (비언어모듈 대기) ── */}
-        <PendingSection title="표정 분석" color="#50eba0" />
-
-        {/* ── 자세 분석 (비언어모듈 대기) ── */}
-        <PendingSection title="자세 분석" color="#5BB8F5" />
-
-        {/* ── 말하기 분석 ── */}
+        {/* ── 비전 분석: 표정 ── */}
         <section className={styles.section}>
           <h3 className={styles.sectionTitle}>
             <span className={styles.sectionDot} style={{ background: '#50eba0' }} />
-            말하기 분석
+            비전 분석 — 표정
+          </h3>
+          {!hasNvData ? (
+            <div style={{ padding: '24px 0', textAlign: 'center', color: '#aaa', fontSize: 14,
+              border: '1.5px dashed #e0e0e0', borderRadius: 12 }}>
+              비전 분석 데이터가 없습니다
+            </div>
+          ) : (
+            <>
+              {/* 요약 수치 */}
+              <div className={styles.statsRow}>
+                {[
+                  { label: '표정 안정성 점수', val: scores['표정안정성'] != null ? `${scores['표정안정성']}점` : '—' },
+                  { label: '표정 다양성 점수', val: scores['표정다양성'] != null ? `${scores['표정다양성']}점` : '—' },
+                  { label: '긍정 표정 비율',   val: exprSummary.positive_ratio != null ? `${Math.round(exprSummary.positive_ratio * 100)}%` : '—', color: '#50eba0' },
+                  { label: '주요 표정',         val: exprSummary.dominant_emotion || '—' },
+                  { label: '분석 프레임 수',    val: exprSummary.frame_count != null ? `${exprSummary.frame_count}장` : '—' },
+                ].map(s => (
+                  <div className={styles.statCard} key={s.label}>
+                    <span className={styles.statLabel}>{s.label}</span>
+                    <span className={styles.statValue} style={s.color ? { color: s.color } : {}}>{s.val}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* 감정 분포 바 */}
+              {exprSummary.emotion_ratios && (
+                <div style={{ marginBottom: 16 }}>
+                  <p className={styles.subLabel}>감정 분포</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {Object.entries(exprSummary.emotion_ratios)
+                      .sort((a, b) => b[1] - a[1])
+                      .filter(([, v]) => v > 0)
+                      .map(([emotion, ratio]) => {
+                        const isPositive = ['Happy', 'Neutral', 'Surprise'].includes(emotion)
+                        const color = isPositive ? '#50eba0' : '#f07070'
+                        return (
+                          <div key={emotion} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ width: 72, fontSize: 12, color: '#666', flexShrink: 0 }}>{emotion}</span>
+                            <div style={{ flex: 1, height: 8, background: '#f0f0f0', borderRadius: 4 }}>
+                              <div style={{ width: `${ratio * 100}%`, height: '100%', background: color, borderRadius: 4 }} />
+                            </div>
+                            <span style={{ width: 36, fontSize: 12, color: '#888', textAlign: 'right' }}>
+                              {Math.round(ratio * 100)}%
+                            </span>
+                          </div>
+                        )
+                      })}
+                  </div>
+                </div>
+              )}
+
+              {/* 피드백 */}
+              {exprSummary.feedback && (
+                <div className={styles.suggestionBox} style={{ borderLeftColor: '#50eba0', background: '#f0fff8' }}>
+                  <p className={styles.subLabel} style={{ color: '#50eba0' }}>표정 피드백</p>
+                  <p className={styles.llmText}>{exprSummary.feedback}</p>
+                </div>
+              )}
+            </>
+          )}
+        </section>
+
+        {/* ── 비전 분석: 자세·시선 ── */}
+        <section className={styles.section}>
+          <h3 className={styles.sectionTitle}>
+            <span className={styles.sectionDot} style={{ background: '#5BB8F5' }} />
+            비전 분석 — 자세 &amp; 시선
+          </h3>
+          {!hasNvData ? (
+            <div style={{ padding: '24px 0', textAlign: 'center', color: '#aaa', fontSize: 14,
+              border: '1.5px dashed #e0e0e0', borderRadius: 12 }}>
+              비전 분석 데이터가 없습니다
+            </div>
+          ) : (
+            <>
+              {/* 요약 수치 */}
+              <div className={styles.statsRow}>
+                {[
+                  { label: '시선 처리 점수',  val: scores['시선처리'] != null ? `${scores['시선처리']}점` : '—' },
+                  { label: '정면 시선 비율',  val: gazeSummary.gaze_ratio != null ? `${Math.round(gazeSummary.gaze_ratio * 100)}%` : '—', color: '#5BB8F5' },
+                  { label: '자세 안정성 점수', val: scores['자세안정성'] != null ? `${scores['자세안정성']}점` : '—' },
+                  { label: '구부정 횟수',      val: postureSummary.slouch_count != null ? `${postureSummary.slouch_count}회` : '—',
+                    color: postureSummary.slouch_count > 5 ? '#f07070' : undefined },
+                  { label: '구부정 비율',      val: postureSummary.slouch_ratio != null ? `${Math.round(postureSummary.slouch_ratio * 100)}%` : '—' },
+                ].map(s => (
+                  <div className={styles.statCard} key={s.label}>
+                    <span className={styles.statLabel}>{s.label}</span>
+                    <span className={styles.statValue} style={s.color ? { color: s.color } : {}}>{s.val}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* 시선 방향 분포 */}
+              {gazeSummary.direction_ratios && (
+                <div style={{ marginBottom: 16 }}>
+                  <p className={styles.subLabel}>시선 방향 분포</p>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {[
+                      { key: 'center', label: '정면', color: '#50eba0' },
+                      { key: 'left',   label: '좌',   color: '#5BB8F5' },
+                      { key: 'right',  label: '우',   color: '#5BB8F5' },
+                      { key: 'up',     label: '위',   color: '#f5b942' },
+                      { key: 'down',   label: '아래', color: '#aaa' },
+                      { key: 'blink',  label: '깜빡임', color: '#ccc' },
+                    ].map(({ key, label, color }) => {
+                      const ratio = key === 'center'
+                        ? gazeSummary.gaze_ratio
+                        : gazeSummary.direction_ratios[key]
+                      if (!ratio) return null
+                      return (
+                        <div key={key} style={{
+                          padding: '6px 12px', borderRadius: 8,
+                          background: color + '22', border: `1px solid ${color}`,
+                          fontSize: 13,
+                        }}>
+                          <span style={{ color: '#666' }}>{label}</span>
+                          <span style={{ color, fontWeight: 700, marginLeft: 6 }}>
+                            {Math.round(ratio * 100)}%
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 시선 이탈 구간 */}
+              {gazeDeductions.length > 0 && (
+                <div className={styles.deductionList} style={{ marginBottom: 16 }}>
+                  <p className={styles.subLabel}>시선 이탈 구간</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {gazeDeductions.slice(0, 8).map((d, i) => (
+                      <div key={i} style={{
+                        padding: '6px 12px', borderRadius: 8,
+                        background: '#f5f5f5', border: '1px solid #e0e0e0',
+                        fontSize: 13, color: '#555',
+                      }}>
+                        <span style={{ fontWeight: 700, color: '#5BB8F5', marginRight: 6 }}>
+                          {formatTime(d.start)}
+                        </span>
+                        {d.direction} 방향 이탈
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 구부정 구간 */}
+              {postureDeductions.length > 0 && (
+                <div className={styles.deductionList} style={{ marginBottom: 16 }}>
+                  <p className={styles.subLabel}>구부정 감지 구간</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {postureDeductions.slice(0, 8).map((d, i) => (
+                      <div key={i} style={{
+                        padding: '6px 12px', borderRadius: 8,
+                        background: '#fff5f5', border: '1px solid #f07070',
+                        fontSize: 13, color: '#555',
+                      }}>
+                        <span style={{ fontWeight: 700, color: '#f07070', marginRight: 6 }}>
+                          {formatTime(d.sec)}
+                        </span>
+                        구부정 (신뢰도 {Math.round(d.confidence * 100)}%)
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 피드백 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {gazeSummary.feedback && (
+                  <div className={styles.suggestionBox} style={{ borderLeftColor: '#5BB8F5', background: '#f0f7ff' }}>
+                    <p className={styles.subLabel} style={{ color: '#5BB8F5' }}>시선 피드백</p>
+                    <p className={styles.llmText}>{gazeSummary.feedback}</p>
+                  </div>
+                )}
+                {postureSummary.feedback && (
+                  <div className={styles.suggestionBox} style={{ borderLeftColor: '#5BB8F5', background: '#f0f7ff' }}>
+                    <p className={styles.subLabel} style={{ color: '#5BB8F5' }}>자세 피드백</p>
+                    <p className={styles.llmText}>{postureSummary.feedback}</p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </section>
+
+        {/* ── 음성 분석 ── */}
+        <section className={styles.section}>
+          <h3 className={styles.sectionTitle}>
+            <span className={styles.sectionDot} style={{ background: '#50eba0' }} />
+            음성 분석
           </h3>
 
           {!hasLangData ? (
             <div style={{ padding: '24px 0', textAlign: 'center', color: '#aaa', fontSize: 14 }}>
-              언어 분석 데이터를 불러올 수 없습니다.
+              음성 분석 데이터를 불러올 수 없습니다.
             </div>
           ) : (
             <>

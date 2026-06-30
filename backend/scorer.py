@@ -5,7 +5,7 @@ scorer.py
 
 항목:
   발화속도      - spm 구간 점수 + 긴침묵 비율 점수 평균
-  말하기안정성  - 더듬음·긴침묵·filler 비율 + 음량 cv, 4개 지표 평균
+  말하기안정성  - 더듬음·filler 비율 + 음량 cv, 3개 지표 평균
   표정안정성    - 비언어모듈 (미구현 → None)
   표정다양성    - 비언어모듈 (미구현 → None)
   자세안정성    - 비언어모듈 (미구현 → None)
@@ -38,7 +38,7 @@ def _speech_rate_score(speech_rate: dict, long_pauses: dict, pure_time: float) -
     return round((spm_score + pause_score) / 2)
 
 
-# ── 말하기안정성: 비율 기반 지표 3개 + cv 기반 음량 1개 ──────────────────────
+# ── 말하기안정성: 비율 기반 지표 2개(더듬음·filler) + cv 기반 음량 1개 ────────
 
 def _ratio_score(count: int, pure_time: float) -> int:
     """횟수 / 순수발화시간(초) 비율 → 점수"""
@@ -66,10 +66,9 @@ def _volume_cv_score(cv: float) -> int:
 
 def _stability_score(metrics: dict, pure_time: float) -> int:
     stutter = _ratio_score(metrics.get("stuttering",  {}).get("count", 0), pure_time)
-    pause   = _ratio_score(metrics.get("long_pauses", {}).get("count", 0), pure_time)
     filler  = _ratio_score(metrics.get("filler_word", {}).get("count", 0), pure_time)
     volume  = _volume_cv_score(metrics.get("volume_stability", {}).get("cv", 0.0))
-    return round((stutter + pause + filler + volume) / 4)
+    return round((stutter + filler + volume) / 3)
 
 
 # ── 답변별 점수 집계 ─────────────────────────────────────────────────────────
@@ -77,15 +76,24 @@ def _stability_score(metrics: dict, pure_time: float) -> int:
 _SCORE_KEYS = ["발화속도", "말하기안정성", "표정안정성", "표정다양성", "자세안정성", "시선처리"]
 
 
-def aggregate_scores(seg_scores: list[dict]) -> dict:
+def aggregate_scores(
+    seg_scores: list[dict],
+    nonverbal_analysis: Optional[dict] = None,
+) -> dict:
     """
     답변별 calc_scores() 결과를 평균하여 전체 점수를 반환합니다.
-    각 답변이 이상 범위면 그대로 감점되고, 평균만 올라가는 것을 방지합니다.
+    nonverbal_analysis가 있으면 비언어 점수를 덮어씁니다.
     """
     result: dict[str, Optional[int]] = {}
     for key in _SCORE_KEYS:
         vals = [s[key] for s in seg_scores if s.get(key) is not None]
         result[key] = round(sum(vals) / len(vals)) if vals else None
+
+    if nonverbal_analysis and nonverbal_analysis.get("status") != "failed":
+        result["표정안정성"] = nonverbal_analysis.get("face_stability_score")
+        result["표정다양성"] = nonverbal_analysis.get("face_diversity_score")
+        result["자세안정성"] = nonverbal_analysis.get("posture_stability_score")
+        result["시선처리"]   = nonverbal_analysis.get("eye_contact_score")
 
     valid = [v for v in result.values() if v is not None]
     result["총점"] = round(sum(valid) / len(valid)) if valid else 0
@@ -119,12 +127,12 @@ def calc_scores(
         "말하기안정성": _stability_score(metrics, pure_time),
     }
 
-    if nonverbal_analysis:
+    if nonverbal_analysis and nonverbal_analysis.get("status") != "failed":
         scores.update({
-            "표정안정성": nonverbal_analysis.get("face_stability"),
-            "표정다양성": nonverbal_analysis.get("face_diversity"),
-            "자세안정성": nonverbal_analysis.get("posture_stability"),
-            "시선처리":   nonverbal_analysis.get("eye_contact"),
+            "표정안정성": nonverbal_analysis.get("face_stability_score"),
+            "표정다양성": nonverbal_analysis.get("face_diversity_score"),
+            "자세안정성": nonverbal_analysis.get("posture_stability_score"),
+            "시선처리":   nonverbal_analysis.get("eye_contact_score"),
         })
 
     valid = [v for v in scores.values() if v is not None]

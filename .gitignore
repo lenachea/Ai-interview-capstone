@@ -1,5 +1,7 @@
 # Data
 nonverbal_language/data/
+verbal_module/data/
+verbal_module/results/
 
 # Model files
 **/*.pth
@@ -7,9 +9,22 @@ nonverbal_language/data/
 **/*.bin
 **/*.onnx
 **/*.task
+verbal_module/models/
 
 # Python
 __pycache__/
 *.pyc
 *.pyo
 .env
+
+# Node / frontend build
+node_modules/
+dist/
+*.zip
+
+# Backend runtime data
+backend/jobs/
+backend/results_db.json
+
+# Editor
+.vscode/

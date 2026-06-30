@@ -1,0 +1,30 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file:
+      - ./verbal_module/.env
+    volumes:
+      - ./backend/jobs:/app/backend/jobs
+      - ./backend/results_db.json:/app/backend/results_db.json
+    ports:
+      - "8000:8000"
+    # GPU 없으면 이 deploy 블록 전체 삭제
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./Cap_Frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped

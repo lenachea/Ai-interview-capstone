@@ -1,7 +1,7 @@
 """
 main.py
 -------
-FastAPI 서버: 영상 → 오디오+프레임 분리 → 화자 분리 → 답변별 언어분석 → 점수 계산
+FastAPI 서버: 영상 → 오디오+프레임 분리 → 화자 분리 → 답변별 음성분석 + 비전분석 → 점수 계산
 
 실행:
     cd backend
@@ -29,8 +29,9 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
-_BACKEND_DIR = Path(__file__).parent
-_LANG_DIR    = _BACKEND_DIR.parent / "verbal_module"
+_BACKEND_DIR    = Path(__file__).parent
+_LANG_DIR       = _BACKEND_DIR.parent / "verbal_module"
+_NONVERBAL_DIR  = _BACKEND_DIR.parent / "nonverbal_module"
 
 # _BACKEND_DIR 을 맨 앞에 두어 backend/main.py 가 언어모듈/main.py 보다 먼저 찾히게 함
 # _LANG_DIR 은 append — insert(0) 하면 uvicorn 리로더 subprocess가
@@ -39,6 +40,8 @@ if str(_BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(_BACKEND_DIR))
 if str(_LANG_DIR) not in sys.path:
     sys.path.append(str(_LANG_DIR))
+if str(_NONVERBAL_DIR) not in sys.path:
+    sys.path.append(str(_NONVERBAL_DIR))
 
 from scorer import calc_scores, aggregate_scores
 import preprocessor
@@ -236,15 +239,24 @@ def _run_analysis(job_id: str, video_path: Path, filename: str):
         frames_count          = 0
         seg_results           = []
         agg_lang              = {}
+        nonverbal_result      = {}
         overall_scores        = {}
         corrected_transcript  = ""
         status                = "failed"
         error                 = ""
 
         try:
+            import importlib.util
             import api as lang_api
             from qa_splitter import find_answer_segments
             from questions   import FIXED_QUESTIONS
+
+            # nonverbal_module api — verbal_module api와 이름 충돌 방지를 위해 파일 직접 로드
+            _nv_api_path = str(_NONVERBAL_DIR / "api.py")
+            _nv_spec = importlib.util.spec_from_file_location("nonverbal_api", _nv_api_path)
+            nonverbal_api = importlib.util.module_from_spec(_nv_spec)
+            nonverbal_api.__file__ = _nv_api_path
+            _nv_spec.loader.exec_module(nonverbal_api)
 
             # ─── 1. 오디오 추출 ───────────────────────────────────────────
             preprocessor.extract_audio(str(video_path), str(audio_path))
@@ -282,7 +294,18 @@ def _run_analysis(job_id: str, video_path: Path, filename: str):
 
             print(f"[Pipeline] 답변 수: {len(answer_segs)}")
 
-            # ─── 5. 답변별 언어 분석 ─────────────────────────────────────
+            # ─── 5. 비언어 분석 (프레임 기반) ────────────────────────────
+            if frames_count > 0:
+                print("[Vision] 비전 분석 시작...")
+                try:
+                    nonverbal_result = nonverbal_api.analyze_nonverbal(str(frames_dir))
+                    print(f"[Vision] 완료 — status: {nonverbal_result.get('status')}")
+                    if nonverbal_result.get("errors"):
+                        print(f"[Vision] 부분 오류: {nonverbal_result['errors']}")
+                except Exception as e:
+                    print(f"[Vision] 분석 실패: {e}")
+
+            # ─── 6. 답변별 언어 분석 ─────────────────────────────────────
             for seg in answer_segs:
                 answer_segment = {"start": seg["start"], "end": seg["end"]}
                 lang_result    = lang_api.analyze_from_words(
@@ -298,15 +321,19 @@ def _run_analysis(job_id: str, video_path: Path, filename: str):
                     "scores":            calc_scores(lang_result),
                 })
 
-            # ─── 6. 집계 ─────────────────────────────────────────────────
+            # ─── 7. 집계 ─────────────────────────────────────────────────
             agg_lang = _aggregate(seg_results)
             if not agg_lang:
                 raise RuntimeError("모든 답변 구간 분석에 실패했습니다")
 
-            # 전체 점수: 답변별 점수를 평균 (spm 상쇄 방지)
-            overall_scores = aggregate_scores([s["scores"] for s in seg_results])
+            # 비언어 점수를 반영한 최종 점수 계산
+            nv = nonverbal_result if nonverbal_result.get("status") != "failed" else None
+            overall_scores = aggregate_scores(
+                [s["scores"] for s in seg_results],
+                nonverbal_analysis=nv,
+            )
 
-            # ─── 7. 표시용 텍스트 교정 (분석 데이터와 분리) ──────────────
+            # ─── 8. 표시용 텍스트 교정 (분석 데이터와 분리) ──────────────
             raw_transcript = agg_lang.get("raw_data", {}).get("transcript", "")
             if raw_transcript:
                 print("[Transcript] GPT 교정 중...")
@@ -328,6 +355,7 @@ def _run_analysis(job_id: str, video_path: Path, filename: str):
         "status":               status,
         "error":                error,
         "language_analysis":    agg_lang,
+        "nonverbal_analysis":   nonverbal_result,
         "corrected_transcript": corrected_transcript,
         "answers":              seg_results,
         "scores":               overall_scores,
