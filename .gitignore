@@ -9,6 +9,8 @@ verbal_module/results/
 **/*.bin
 **/*.onnx
 **/*.task
+!nonverbal_language/face_landmarker.task
+!nonverbal_language/pose_landmarker.task
 verbal_module/models/
 
 # Python

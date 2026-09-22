@@ -1,0 +1,479 @@
+/* ── 스플릿 레이아웃 ─────────────────────────────────────────────── */
+.pageLayout {
+  position: relative;
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* 우측 블루 그라데이션 장식 — 카드 뒤에 위치 (z-index: 0) */
+.pageLayout::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 150px;
+  height: 100%;
+  background: linear-gradient(to left, var(--color-accent-light-blue), transparent);
+  border-radius: 8px 0 0 8px;
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── 좌측 패널 (고정, 자체 스크롤) ─────────────────────────────── */
+.leftPanel {
+  position: relative;
+  height: 100vh;
+  overflow-y: auto;
+  background: white;
+  border-right: 1px solid #eee;
+  padding: 28px 20px 40px 28px;
+}
+
+/* 좌측 패널 민트 그라데이션 장식 */
+.leftPanel::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 8px;
+  height: 100%;
+  background: linear-gradient(to right, var(--color-accent-light-mint), transparent);
+  pointer-events: none;
+}
+
+.leftInner {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.leftTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.avgBadge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f5f5f5;
+  border-radius: 20px;
+  padding: 8px 16px;
+  width: fit-content;
+}
+
+.avgScore {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.avgGrade {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.chartWrap {
+  width: 100%;
+}
+
+/* 점수 목록 */
+.scoreList {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.scoreRow {
+  display: grid;
+  grid-template-columns: 90px 1fr 32px 56px;
+  align-items: center;
+  gap: 8px;
+}
+
+.scoreLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.scoreTrack {
+  height: 7px;
+  background: #eee;
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.scoreFill {
+  height: 100%;
+  border-radius: 99px;
+}
+
+.scoreNum {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text);
+  text-align: right;
+}
+
+.scoreGrade {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* 좌측 버튼 */
+.leftActions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.pdfBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px;
+  border-radius: var(--radius-btn);
+  background: linear-gradient(135deg, var(--color-green), var(--color-blue));
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+}
+
+.pdfBtn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.pdfBtn:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+.homeBtn {
+  background: none;
+  color: var(--color-text-light);
+  font-size: 13px;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+  text-align: center;
+}
+
+.homeBtn:hover {
+  background: #f0f0f0;
+}
+
+/* ── 우측 패널 (스크롤) ─────────────────────────────────────────── */
+.rightPanel {
+  position: relative;
+  height: 100vh;
+  overflow-y: auto;
+  background: #f8fafb;
+  padding: 28px 32px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  z-index: 1;   /* pageLayout::after(z-index:0) 위에 오도록 */
+}
+
+
+.rightTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text);
+  padding-bottom: 4px;
+  border-bottom: 2px solid #eee;
+}
+
+/* ── 섹션 카드 ────────────────────────────────────────────────────── */
+.section {
+  background: white;
+  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.sectionTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sectionDot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* 통계 카드 */
+.statsRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.statCard {
+  background: #f7f9fc;
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 90px;
+}
+
+.statLabel {
+  font-size: 11px;
+  color: var(--color-text-light);
+  font-weight: 500;
+}
+
+.statValue {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+/* 감정 분포 */
+.emotionBars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.subLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.emotionRow {
+  display: grid;
+  grid-template-columns: 50px 1fr 36px;
+  align-items: center;
+  gap: 10px;
+}
+
+.emotionLabel { font-size: 13px; color: var(--color-text); }
+
+.emotionTrack {
+  height: 8px;
+  background: #eee;
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.emotionFill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #50eba0, #5BB8F5);
+}
+
+.emotionPct {
+  font-size: 12px;
+  color: var(--color-text-light);
+  text-align: right;
+}
+
+/* 감점 구간 클립 */
+.deductionList { display: flex; flex-direction: column; gap: 8px; }
+
+.clips { display: flex; flex-direction: column; gap: 8px; }
+
+.clipItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f7f9fc;
+  border-radius: 10px;
+  padding: 10px 14px;
+  flex-wrap: wrap;
+}
+
+.timestamp {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-blue);
+  background: var(--color-accent-light-blue);
+  padding: 3px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.thumbnail {
+  width: 68px;
+  height: 42px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.thumbnail img { width: 100%; height: 100%; object-fit: cover; }
+
+.thumbnailPlaceholder {
+  width: 100%;
+  height: 100%;
+  background: #eee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thumbnailPlaceholder svg { width: 22px; height: 22px; }
+
+.audioClip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #eee;
+  border-radius: 6px;
+  padding: 5px 10px;
+}
+
+.audioClip svg { width: 38px; height: 18px; }
+
+.audioLabel { font-size: 11px; color: var(--color-text-light); white-space: nowrap; }
+
+.clipDesc { font-size: 13px; color: var(--color-text); flex: 1; min-width: 120px; }
+
+/* 교정 제안 */
+.suggestionBox {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #f0fdf8;
+  border-radius: 12px;
+  padding: 14px;
+  border-left: 4px solid var(--color-green);
+}
+
+.correctionImageSlot { width: 100%; min-height: 120px; border-radius: 10px; overflow: hidden; }
+
+.correctionImage { width: 100%; height: auto; border-radius: 10px; }
+
+.correctionImagePlaceholder {
+  width: 100%;
+  min-height: 120px;
+  background: white;
+  border: 2px dashed #ccc;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+}
+
+.correctionImagePlaceholder svg { width: 36px; height: 36px; }
+
+.correctionImagePlaceholder span {
+  font-size: 12px;
+  color: #bbb;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.llmText { font-size: 14px; color: var(--color-text); line-height: 1.7; }
+
+/* 습관어 */
+.fillerWords { display: flex; flex-direction: column; gap: 8px; }
+
+.fillerGrid { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.fillerItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-accent-light-mint);
+  border-radius: 20px;
+  padding: 5px 12px;
+}
+
+.fillerWord { font-size: 14px; font-weight: 600; color: var(--color-text); }
+
+.fillerCount { font-size: 12px; color: var(--color-green); font-weight: 600; }
+
+/* ── 인쇄(PDF) 스타일 ────────────────────────────────────────────── */
+@media print {
+  .pageLayout {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .leftPanel {
+    height: auto !important;
+    overflow: visible !important;
+    width: 100% !important;
+    border-right: none !important;
+    padding: 20px !important;
+    page-break-after: always;
+  }
+
+  .rightPanel {
+    height: auto !important;
+    overflow: visible !important;
+    width: 100% !important;
+    padding: 20px !important;
+  }
+
+  .printHide {
+    display: none !important;
+  }
+
+  .section {
+    box-shadow: none !important;
+    border: 1px solid #eee;
+    page-break-inside: avoid;
+  }
+
+  .chartWrap {
+    max-width: 400px;
+    margin: 0 auto;
+  }
+}
+
+/* ── 반응형 (모바일) ──────────────────────────────────────────────── */
+@media (max-width: 860px) {
+  .pageLayout {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+  }
+
+  .leftPanel {
+    height: auto;
+    overflow: visible;
+    border-right: none;
+    border-bottom: 1px solid #eee;
+    padding: 24px 20px;
+  }
+
+  .rightPanel {
+    height: auto;
+    overflow: visible;
+    padding: 24px 20px 60px;
+  }
+}
