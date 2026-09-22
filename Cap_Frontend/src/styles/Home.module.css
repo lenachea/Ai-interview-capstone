@@ -56,7 +56,7 @@ position: absolute;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 30px;
 }
 
 .logoText {
@@ -72,7 +72,7 @@ position: absolute;
 }
 
 .logoImg {
-  height: 220px;
+  height: 200px;
   width: auto;
   object-fit: contain;
 }
@@ -85,12 +85,76 @@ position: absolute;
 }
 
 
-/* 버튼 영역 */
+/* 버튼 영역 — 큰 버튼 두 개(실시간 모의면접/영상 분석)를 기준으로 가운데 정렬,
+   실전연습 버튼은 정렬 계산에서 빠지도록 절대 위치로 왼쪽 바깥에 붙임 */
 .buttonArea {
+  position: relative;
   display: flex;
   gap: 100px;
   flex-wrap: wrap;
   justify-content: center;
+}
+
+.practiceBtn {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 40px);
+  margin-top: -70px;   /* height(140px)의 절반만큼 세로 중앙 정렬 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 160px;
+  height: 130px;
+  border-radius: var(--radius-btn);
+  background-color: #9bd4ff;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  padding: 28px;
+}
+
+.practiceBtn:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.practiceBtn:active {
+  transform: translateY(0px);
+  box-shadow: var(--shadow-card);
+}
+
+.practiceBtn .btnLabel {
+  color: #FFFFFF;
+}
+
+.historyBtn {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 40px);
+  margin-top: -70px;   /* height(140px)의 절반만큼 세로 중앙 정렬 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 160px;
+  height: 130px;
+  border-radius: var(--radius-btn);
+  background-color: #83e5a6;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  padding: 28px;
+}
+
+.historyBtn:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.historyBtn:active {
+  transform: translateY(0px);
+  box-shadow: var(--shadow-card);
+}
+
+.historyBtn .btnLabel {
+  color: #FFFFFF;
 }
 
 .navBtn {

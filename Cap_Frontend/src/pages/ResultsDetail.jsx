@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import RadarChart from '../components/RadarChart'
 import styles from '../styles/ResultsDetail.module.css'
+import { getRealtimeVideoUrl } from '../lib/api'
 
 function AudioPlayer({ src }) {
   const audioRef  = useRef(null)
@@ -204,6 +205,7 @@ export default function ResultsDetail() {
   const compareData = location.state?.compareData || null
 
   const jobId              = compareData?.current?.job_id || null
+  const videotype          = compareData?.current?.videotype || null
   const scores             = compareData?.current?.scores || {}
   const lang               = compareData?.current?.language_analysis || {}
   const metrics            = lang.metrics || {}
@@ -342,6 +344,21 @@ export default function ResultsDetail() {
       {/* ════ 우측 패널: 상세 분석 (스크롤) ════ */}
       <main className={styles.rightPanel}>
         <h2 className={styles.rightTitle}>상세 분석 결과</h2>
+
+        {/* ── 영상 보기 (실시간/실전연습 세션만) ── */}
+        {videotype && jobId && (
+          <section className={styles.section}>
+            <h3 className={styles.sectionTitle}>
+              <span className={styles.sectionDot} style={{ background: '#5BB8F5' }} />
+              영상 보기
+            </h3>
+            <video
+              controls
+              src={getRealtimeVideoUrl(jobId)}
+              style={{ width: '100%', maxHeight: 480, borderRadius: 12, background: '#000' }}
+            />
+          </section>
+        )}
 
         {/* ── 비전 분석: 표정 ── */}
         <section className={styles.section}>

@@ -2,15 +2,16 @@ import { useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import AppLogo from '../components/AppLogo'
 import styles from '../styles/AnalysisLoading.module.css'
-import { getResults, compareResults } from '../lib/api'
+import { getResults, compareResults, compareRealtimeResults } from '../lib/api'
 
 const POLL_INTERVAL_MS = 3000
 
 export default function AnalysisLoading() {
   const navigate = useNavigate()
   const location = useLocation()
-  const fileName = location.state?.fileName || '영상'
-  const jobId    = location.state?.jobId   || null
+  const fileName   = location.state?.fileName   || '영상'
+  const jobId      = location.state?.jobId      || null
+  const isRealtime = location.state?.isRealtime || false
   const timerRef = useRef(null)
 
   useEffect(() => {
@@ -28,7 +29,9 @@ export default function AnalysisLoading() {
           clearInterval(timerRef.current)
           // 비교 데이터 미리 fetch
           try {
-            const compareData = await compareResults(jobId)
+            const compareData = isRealtime
+              ? await compareRealtimeResults(jobId)
+              : await compareResults(jobId)
             navigate('/results', { state: { jobId, compareData } })
           } catch {
             navigate('/results', { state: { jobId, compareData: { current: result, previous: null, diff: {} } } })
@@ -44,7 +47,7 @@ export default function AnalysisLoading() {
     }, POLL_INTERVAL_MS)
 
     return () => clearInterval(timerRef.current)
-  }, [jobId, navigate])
+  }, [jobId, navigate, isRealtime])
 
   return (
     <div className={styles.container}>

@@ -1,0 +1,140 @@
+.container {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-bg);
+  overflow: hidden;
+  padding: 40px 20px;
+}
+
+.gradientMint {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 150px;
+  height: 100%;
+  background: linear-gradient(to right, var(--color-accent-light-mint), transparent);
+  border-radius: 0 8px 8px 0;
+  opacity: 0.9;
+}
+
+.gradientBlue {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 150px;
+  height: 100%;
+  background: linear-gradient(to left, var(--color-accent-light-blue), transparent);
+  border-radius: 8px 0 0 8px;
+  opacity: 0.9;
+}
+
+.card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 380px;
+  background: white;
+  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+  padding: 36px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text);
+  text-align: center;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-light);
+}
+
+.input {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1.5px solid #e0e0e0;
+  font-size: 15px;
+  color: var(--color-text);
+  transition: border-color 0.15s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-blue);
+}
+
+.error {
+  font-size: 13px;
+  color: #f07070;
+  text-align: center;
+}
+
+.submitBtn {
+  margin-top: 4px;
+  padding: 14px;
+  border-radius: var(--radius-btn);
+  background: linear-gradient(135deg, var(--color-green), var(--color-blue));
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+}
+
+.submitBtn:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+.switchRow {
+  text-align: center;
+  font-size: 14px;
+  color: var(--color-text-light);
+}
+
+.switchLink {
+  color: var(--color-blue);
+  font-weight: 700;
+  background: none;
+  padding: 0;
+  margin-left: 4px;
+}
+
+.passwordWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.passwordWrap .input {
+  width: 100%;
+  padding-right: 44px;
+}
+
+.eyeBtn {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+  color: var(--color-text-light);
+  display: flex;
+  align-items: center;
+}

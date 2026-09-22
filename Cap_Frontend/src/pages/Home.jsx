@@ -1,14 +1,29 @@
 import { useNavigate } from 'react-router-dom'
 import styles from '../styles/Home.module.css'
+import authStyles from '../styles/AppLogo.module.css'
+import { useAuth } from '../context/AuthContext'
 
 export default function Home() {
   const navigate = useNavigate()
+  const auth = useAuth()
 
   return (
     <div className={styles.container}>
       {/* 배경 줄무늬 장식 */}
       <div className={styles.gradientMint} />
       <div className={styles.gradientBlue} />
+
+      {/* 로그인 상태 뱃지 */}
+      <div className={authStyles.authBadge}>
+        {auth?.user ? (
+          <>
+            <span className={authStyles.authUser}>{auth.user.username}님</span>
+            <button className={authStyles.authLink} onClick={() => auth.logout()}>로그아웃</button>
+          </>
+        ) : (
+          <button className={authStyles.authLink} onClick={() => navigate('/login')}>로그인</button>
+        )}
+      </div>
 
       <div className={styles.content}>
         {/* 로고 영역 */}
@@ -19,6 +34,14 @@ export default function Home() {
 
         {/* 버튼 영역 */}
         <div className={styles.buttonArea}>
+          {/* 실전연습 버튼 (독립 카드) */}
+          <button
+            className={styles.practiceBtn}
+            onClick={() => navigate('/realtime', { state: { mode: 'practice' } })}
+          >
+            <span className={styles.btnLabel}>실전 연습</span>
+          </button>
+
           {/* 실시간 모의면접 버튼 */}
           <button
             className={`${styles.navBtn} ${styles.btnBlue}`}
@@ -58,6 +81,14 @@ export default function Home() {
               </svg>
             </div>
             <span className={styles.btnLabel}>모의면접 영상 분석</span>
+          </button>
+
+          {/* 지난기록 보기 버튼 (독립 카드, 실전연습과 대칭) */}
+          <button
+            className={styles.historyBtn}
+            onClick={() => navigate('/history')}
+          >
+            <span className={styles.btnLabel}>지난 기록 보기</span>
           </button>
         </div>
       </div>

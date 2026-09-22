@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import AppLogo from '../components/AppLogo'
 import styles from '../styles/RealtimeSetup.module.css'
+import { getRealtimeQuestions, startRealtimeInterview } from '../lib/api'
 
 const STATUS_INFO = {
   checking: { label: '확인 중...', color: '#aaa' },
@@ -51,6 +52,9 @@ const GUIDANCE_ITEMS = [
 
 export default function RealtimeSetup() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const mode = location.state?.mode || 'realtime'
+  const isPractice = mode === 'practice'
   const videoRef     = useRef(null)
   const canvasRef    = useRef(null)
   const streamsRef   = useRef([])
@@ -60,6 +64,17 @@ export default function RealtimeSetup() {
 
   const [cameraStatus, setCameraStatus] = useState('checking')
   const [micStatus,    setMicStatus]    = useState('checking')
+
+  const [categories,       setCategories]       = useState({})
+  const [selectedCategory, setSelectedCategory]  = useState(null)
+  const [starting,         setStarting]          = useState(false)
+  const [startError,       setStartError]        = useState('')
+
+  useEffect(() => {
+    getRealtimeQuestions()
+      .then(setCategories)
+      .catch(() => setStartError('질문 목록을 불러오지 못했습니다. 백엔드 서버 상태를 확인해주세요.'))
+  }, [])
 
   // ── VU 미터 (좌→우로 커졌다 작아지는 수평 레벨 바) ─────────────
   const startVolumeViz = useCallback((stream) => {
@@ -165,6 +180,21 @@ export default function RealtimeSetup() {
   const camInfo    = STATUS_INFO[cameraStatus]
   const micInfo    = STATUS_INFO[micStatus]
 
+  async function handleStart() {
+    if (!allGranted || !selectedCategory || starting) return
+    setStarting(true)
+    setStartError('')
+    try {
+      const { job_id, questions } = await startRealtimeInterview(selectedCategory, mode)
+      navigate('/realtime/interview', {
+        state: { jobId: job_id, questions, category: selectedCategory, mode },
+      })
+    } catch (err) {
+      setStartError('면접 시작에 실패했습니다. 백엔드 서버가 실행 중인지 확인해주세요.')
+      setStarting(false)
+    }
+  }
+
   return (
     <div className={styles.container}>
       <AppLogo />
@@ -175,6 +205,9 @@ export default function RealtimeSetup() {
         <div className={styles.pageHeader}>
           <h2 className={styles.title}>장치 상태 확인</h2>
           <p className={styles.desc}>면접 시작 전 웹캠과 마이크 권한을 허용해주세요.</p>
+          {isPractice && (
+            <p className={styles.desc}>실전연습 모드 — 화면이 비공개로 진행되며, 질문은 무작위 순서로 출제됩니다.</p>
+          )}
         </div>
 
         {/* ── 좌우 2열 레이아웃 ── */}
@@ -281,16 +314,36 @@ export default function RealtimeSetup() {
               </div>
             </aside>
 
+            {/* 분야 선택 */}
+            {allGranted && (
+              <div className={styles.categoryPanel}>
+                <h3 className={styles.guidanceTitle}>면접 분야 선택</h3>
+                <div className={styles.categoryChips}>
+                  {Object.keys(categories).map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      className={`${styles.categoryChip} ${selectedCategory === cat ? styles.categoryChipActive : ''}`}
+                      onClick={() => setSelectedCategory(cat)}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* 버튼: 안내 패널 아래, 마이크 영역 우측 */}
             <div className={styles.actions}>
+              {startError && <p className={styles.startError}>{startError}</p>}
               <button
                 className={styles.startBtn}
-                disabled={!allGranted}
-                onClick={() => alert('면접 시작 기능은 백엔드 연결 후 구현됩니다.')}
+                disabled={!allGranted || !selectedCategory || starting}
+                onClick={handleStart}
               >
-                면접 시작
+                {starting ? '준비 중...' : '면접 시작'}
               </button>
-              <button className={styles.backBtn} onClick={() => navigate('/')}>
+              <button className={styles.backBtn} onClick={() => navigate('/')} disabled={starting}>
                 뒤로가기
               </button>
             </div>

@@ -1,0 +1,191 @@
+/* AdminUsers.module.css — 유저 관리 페이지 스타일 */
+
+.container {
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 80px 16px 40px;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg, #0d1117);
+}
+
+/* 기존 Auth 스타일의 그라디언트 배경과 동일하게 */
+.gradientMint {
+  position: absolute;
+  width: 600px; height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(80,235,160,0.18) 0%, transparent 70%);
+  top: -200px; left: -200px;
+  pointer-events: none;
+}
+.gradientBlue {
+  position: absolute;
+  width: 500px; height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(91,184,245,0.15) 0%, transparent 70%);
+  bottom: -150px; right: -150px;
+  pointer-events: none;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 720px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #e6edf3;
+  margin: 0;
+}
+
+/* 유저 추가 버튼 */
+.addBtn {
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, #50eba0, #5BB8F5);
+  color: #0d1117;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: opacity 0.15s;
+}
+.addBtn:hover { opacity: 0.85; }
+
+/* 인라인 추가 폼 */
+.form {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+.formRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.formInput, .formSelect {
+  flex: 1;
+  min-width: 120px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06);
+  color: #e6edf3;
+  font-size: 0.875rem;
+  outline: none;
+}
+.formInput:focus, .formSelect:focus {
+  border-color: #50eba0;
+}
+.formSelect option { background: #1c2128; }
+.createBtn {
+  padding: 9px 20px;
+  border-radius: 8px;
+  border: none;
+  background: #50eba0;
+  color: #0d1117;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+.createBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+.formError {
+  color: #f07070;
+  font-size: 0.8rem;
+  margin: 8px 0 0;
+}
+
+/* 테이블 */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(255,255,255,0.04);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.table th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #8b949e;
+  background: rgba(255,255,255,0.04);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.table td {
+  padding: 13px 16px;
+  color: #c9d1d9;
+  font-size: 0.9rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.table tr:last-child td { border-bottom: none; }
+.table tr:hover td { background: rgba(255,255,255,0.03); }
+
+.dateCell { color: #8b949e; font-size: 0.82rem; }
+
+/* 권한 배지 */
+.badgeAdmin, .badgeUser {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.badgeAdmin {
+  background: rgba(80,235,160,0.15);
+  color: #50eba0;
+  border: 1px solid rgba(80,235,160,0.3);
+}
+.badgeUser {
+  background: rgba(91,184,245,0.12);
+  color: #5BB8F5;
+  border: 1px solid rgba(91,184,245,0.25);
+}
+
+/* 삭제 버튼 */
+.deleteBtn {
+  padding: 5px 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(240,112,112,0.4);
+  background: rgba(240,112,112,0.08);
+  color: #f07070;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.deleteBtn:hover { background: rgba(240,112,112,0.2); }
+
+/* 기타 */
+.hint  { color: #8b949e; text-align: center; padding: 32px 0; }
+.error { color: #f07070; font-size: 0.875rem; margin-bottom: 12px; }
+
+.backBtn {
+  display: block;
+  margin: 28px auto 0;
+  padding: 10px 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: transparent;
+  color: #8b949e;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: color 0.15s, border-color 0.15s;
+}
+.backBtn:hover { color: #e6edf3; border-color: rgba(255,255,255,0.3); }

@@ -25,3 +25,30 @@
   width: auto;
   object-fit: contain;
 }
+
+/* 로그인 상태 뱃지 — 화면 우측 상단 고정 */
+.authBadge {
+  position: fixed;
+  top: 20px;
+  right: 24px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.authUser {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.authLink {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-blue);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}

@@ -25,6 +25,10 @@ dist/
 # Backend runtime data
 backend/jobs/
 backend/results_db.json
+backend/users.db
 
 # Editor
 .vscode/
+
+# Local tooling
+.claude/

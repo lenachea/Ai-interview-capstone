@@ -286,6 +286,50 @@ position: absolute;
   line-height: 1.6;
 }
 
+/* ── 분야 선택 ── */
+.categoryPanel {
+  background: white;
+  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.categoryChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.categoryChip {
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1.5px solid #e0e0e0;
+  background: white;
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.categoryChip:hover {
+  border-color: var(--color-blue);
+}
+
+.categoryChipActive {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--color-green), var(--color-blue));
+  color: white;
+}
+
+.startError {
+  font-size: 13px;
+  color: #f07070;
+  text-align: center;
+}
+
 /* ── 버튼 ── */
 .actions {
   display: flex;
