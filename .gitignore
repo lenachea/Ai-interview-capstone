@@ -9,8 +9,8 @@ verbal_module/results/
 **/*.bin
 **/*.onnx
 **/*.task
-!nonverbal_language/face_landmarker.task
-!nonverbal_language/pose_landmarker.task
+!nonverbal_module/face_landmarker.task
+!nonverbal_module/pose_landmarker.task
 verbal_module/models/
 
 # Python
@@ -34,3 +34,22 @@ backend/users.db
 
 # Local tooling
 .claude/
+
+# 평가모델 데이터셋 (대용량 — 구글드라이브에서 별도 관리)
+eval_model/data/raw_videos/
+eval_model/data/_audio_tmp/
+eval_model/data/*.txt
+
+# 영상 파일
+*.mp4
+*.avi
+*.mov
+
+# 노드 모듈
+node_modules/
+
+# 프레임 이미지 (재생성 가능한 중간 산출물)
+nonverbal_module/posture_rtmpose_frames/
+
+# 구 구조 (nonverbal_module 으로 이관됨)
+nonverbal_language/

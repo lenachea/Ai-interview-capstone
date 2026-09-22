@@ -2,24 +2,61 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import os
-import glob
 from pathlib import Path
+import glob
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 
 MODEL_PATH = str((Path(__file__).resolve().parent / "face_landmarker.task"))
+FACE_CROP_PADDING = 0.25
 
 def _create_detector():
-    with open(MODEL_PATH, "rb") as f:
-        model_data = f.read()
-    base_options = python.BaseOptions(model_asset_buffer=model_data)
+    base_options = python.BaseOptions(model_asset_path=MODEL_PATH)
     options = vision.FaceLandmarkerOptions(
         base_options=base_options,
         output_face_blendshapes=True,
         output_facial_transformation_matrixes=False,
         num_faces=1
     )
+
+
     return vision.FaceLandmarker.create_from_options(options)
+
+def detect_cropped_face(frame, detector, padding=FACE_CROP_PADDING):
+    """전체 프레임에서 얼굴을 찾은 뒤 여백을 두고 크롭하여 다시 분석한다."""
+    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+    initial_result = detector.detect(mp_image)
+
+    if not initial_result.face_landmarks:
+        return frame, initial_result
+
+    h, w = frame.shape[:2]
+    landmarks = initial_result.face_landmarks[0]
+    xs = [landmark.x * w for landmark in landmarks]
+    ys = [landmark.y * h for landmark in landmarks]
+
+    face_w = max(xs) - min(xs)
+    face_h = max(ys) - min(ys)
+    pad_x = face_w * padding
+    pad_y = face_h * padding
+
+    x1 = max(0, int(min(xs) - pad_x))
+    y1 = max(0, int(min(ys) - pad_y))
+    x2 = min(w, int(max(xs) + pad_x))
+    y2 = min(h, int(max(ys) + pad_y))
+
+    if x2 <= x1 or y2 <= y1:
+        return frame, initial_result
+
+    cropped = frame[y1:y2, x1:x2].copy()
+    crop_rgb = cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB)
+    crop_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=crop_rgb)
+    crop_result = detector.detect(crop_image)
+
+    if not crop_result.face_landmarks:
+        return frame, initial_result
+    return cropped, crop_result
 
 def analyze_gaze_bs(blendshapes):
     """Blendshape 기반 시선 분석"""
@@ -78,9 +115,7 @@ def analyze_video_gaze(video_path):
             break
 
         current_time = frame_idx / fps
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
-        result = detector.detect(mp_image)
+        _, result = detect_cropped_face(frame, detector)
 
         if result.face_landmarks and result.face_blendshapes:
             direction = analyze_gaze_bs(result.face_blendshapes[0])
@@ -110,14 +145,12 @@ def analyze_frames_gaze(frames_dir, fps=30, img_ext="*.jpg"):
     for frame_idx, frame_path in enumerate(frame_files):
         current_time = round(frame_idx / fps, 2)
 
-        frame = cv2.imdecode(np.fromfile(frame_path, dtype=np.uint8), cv2.IMREAD_COLOR)
+        frame = cv2.imread(frame_path)
         if frame is None:
             print(f"[WARN] 읽기 실패: {frame_path}")
             continue
 
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
-        result = detector.detect(mp_image)
+        _, result = detect_cropped_face(frame, detector)
 
         if result.face_landmarks and result.face_blendshapes:
             bs = {b.category_name: b.score for b in result.face_blendshapes[0]}
@@ -208,14 +241,12 @@ def visualize_gaze_frames(frames_dir, output_dir, fps=1, img_ext="*.jpg"):
     IRIS_IDX    = [468, 473]
 
     for frame_path in frame_files:
-        frame = cv2.imdecode(np.fromfile(frame_path, dtype=np.uint8), cv2.IMREAD_COLOR)
+        frame = cv2.imread(frame_path)
         if frame is None:
             continue
 
+        frame, result = detect_cropped_face(frame, detector)
         h, w = frame.shape[:2]
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
-        result = detector.detect(mp_image)
 
         if result.face_landmarks and result.face_blendshapes:
             lm = result.face_landmarks[0]
@@ -295,7 +326,7 @@ def visualize_gaze_frames(frames_dir, output_dir, fps=1, img_ext="*.jpg"):
     print(f"[완료] {len(frame_files)}장 저장 → {output_dir}")
 
 
-def make_grid(frames_dir, out_path, gaze_log, thumb_w=200, cols=8, img_ext="*.jpg"):
+def make_grid(frames_dir, out_path, gaze_log, thumb_w=200, cols=8, img_ext="*.jpg", only_non_center=False):
     DIR_COLOR = {
         "center": (0, 200, 0),
         "left":   (0, 0, 220),
@@ -326,14 +357,23 @@ def make_grid(frames_dir, out_path, gaze_log, thumb_w=200, cols=8, img_ext="*.jp
 
     thumbs = []
     for idx, f in enumerate(files):
+        direction = direction_map.get(idx, "none")
+        if only_non_center and direction == "center":
+            continue
         img = cv2.imread(f)
         if img is None:
             continue
         h, w = img.shape[:2]
-        thumb_h = int(thumb_w * h / w)
-        thumb = cv2.resize(img, (thumb_w, thumb_h))
+        thumb_h = int(thumb_w * 1.25)
+        scale = min(thumb_w / w, thumb_h / h)
+        resized_w = max(1, int(w * scale))
+        resized_h = max(1, int(h * scale))
+        resized = cv2.resize(img, (resized_w, resized_h))
+        thumb = np.zeros((thumb_h, thumb_w, 3), dtype=np.uint8)
+        offset_x = (thumb_w - resized_w) // 2
+        offset_y = (thumb_h - resized_h) // 2
+        thumb[offset_y:offset_y + resized_h, offset_x:offset_x + resized_w] = resized
 
-        direction = direction_map.get(idx, "none")
         color     = DIR_COLOR[direction]
         scores    = scores_map.get(idx, {})
 
@@ -372,6 +412,11 @@ def make_grid(frames_dir, out_path, gaze_log, thumb_w=200, cols=8, img_ext="*.jp
         cell = np.vstack([thumb, label_bar, score_bar])
         thumbs.append(cell)
 
+    if not thumbs:
+        print("[INFO] center가 아닌 프레임이 없습니다.")
+        return
+
+    selected_count = len(thumbs)
     cell_h = thumbs[0].shape[0]
     rows = (len(thumbs) + cols - 1) // cols
     blank = np.zeros((cell_h, thumb_w, 3), dtype=np.uint8)
@@ -382,7 +427,7 @@ def make_grid(frames_dir, out_path, gaze_log, thumb_w=200, cols=8, img_ext="*.jp
     grid = np.vstack(grid_rows)
 
     cv2.imwrite(out_path, grid)
-    print(f"[완료] 그리드 저장 → {out_path}  ({len(files)}장, {cols}열 × {rows}행)")
+    print(f"[완료] 그리드 저장 → {out_path}  ({selected_count}장, {cols}열 × {rows}행)")
 
 
 # ============ 실행 ============
@@ -392,8 +437,14 @@ def make_grid(frames_dir, out_path, gaze_log, thumb_w=200, cols=8, img_ext="*.jp
 if __name__ == "__main__":
     import sys
     import json
+    import subprocess
 
-    FRAMES_DIR = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(os.path.abspath(__file__)), "frames")
+    if len(sys.argv) == 1:
+        frames_script = "/workspace/CSM/nonverbal_language/Video to frames/frames_cut.py"
+        print("선택한 동영상에서 프레임을 생성합니다...")
+        subprocess.run([sys.executable, frames_script], check=True)
+
+    FRAMES_DIR = sys.argv[1] if len(sys.argv) > 1 else "/workspace/CSM/nonverbal_language/Video to frames/frames"
     VIZ_DIR    = os.path.join(FRAMES_DIR, "../frames_viz")
     GRID_PATH  = os.path.join(FRAMES_DIR, "../gaze_grid.jpg")
     JSON_PATH  = os.path.join(FRAMES_DIR, "../gaze_results.json")
@@ -422,4 +473,4 @@ if __name__ == "__main__":
     visualize_gaze_frames(FRAMES_DIR, VIZ_DIR, fps=1)
 
     print("그리드 생성 중...")
-    make_grid(FRAMES_DIR, GRID_PATH, gaze_log, thumb_w=200, cols=8)
+    make_grid(VIZ_DIR, GRID_PATH, gaze_log, thumb_w=200, cols=8)

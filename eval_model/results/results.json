@@ -1,0 +1,557 @@
+{
+  "n_samples": 33,
+  "n_features": 52,
+  "n_groups": 9,
+  "cv": "GroupKFold(5)",
+  "targets": {
+    "말속도": {
+      "item": "발화속도",
+      "weight": 15
+    },
+    "명확성": {
+      "item": "말하기안정성",
+      "weight": 15
+    },
+    "침묵": {
+      "item": "유창성침묵",
+      "weight": 15
+    },
+    "습관어": {
+      "item": "습관어반복",
+      "weight": 10
+    },
+    "시선비율": {
+      "item": "시선처리",
+      "weight": 15
+    },
+    "표정": {
+      "item": "표정자연스러움",
+      "weight": 15
+    },
+    "상반신자세": {
+      "item": "자세움직임",
+      "weight": 15
+    }
+  },
+  "total_formula": "sum((item_score - 1) / 4 * weight)",
+  "feature_names": [
+    "spm",
+    "filler_count",
+    "filler_per_min",
+    "stutter_count",
+    "stutter_per_min",
+    "long_pause_count",
+    "long_pause_per_min",
+    "long_pause_total_sec",
+    "long_pause_max_sec",
+    "long_pause_ratio",
+    "volume_rms_mean",
+    "volume_rms_std",
+    "volume_cv",
+    "total_duration_sec",
+    "pure_speech_time_sec",
+    "speech_ratio",
+    "word_count",
+    "gaze_center_ratio",
+    "gaze_left_ratio",
+    "gaze_right_ratio",
+    "gaze_up_ratio",
+    "gaze_down_ratio",
+    "gaze_blink_ratio",
+    "gaze_deviation_count",
+    "gaze_deviation_mean_sec",
+    "gaze_deviation_max_sec",
+    "face_detect_ratio",
+    "emo_neutral_ratio",
+    "emo_happy_ratio",
+    "emo_negative_ratio",
+    "emo_surprise_ratio",
+    "emo_entropy",
+    "emo_unique_count",
+    "emo_change_rate",
+    "emo_mean_confidence",
+    "posture_score_mean",
+    "posture_score_std",
+    "posture_score_min",
+    "posture_score_p25",
+    "pose_detect_ratio",
+    "posture_shoulder_mean",
+    "posture_shoulder_issue_rate",
+    "posture_torso_mean",
+    "posture_torso_issue_rate",
+    "posture_head_tilt_mean",
+    "posture_head_tilt_issue_rate",
+    "posture_forward_mean",
+    "posture_forward_issue_rate",
+    "posture_drop_mean",
+    "posture_drop_issue_rate",
+    "posture_rotation_mean",
+    "posture_rotation_issue_rate"
+  ],
+  "summary_total": [
+    {
+      "model": "Dummy(mean)",
+      "mae_mean": 16.15122266009852,
+      "mae_std": 1.9546093114192096,
+      "rmse_mean": 19.836547693364317,
+      "rmse_std": 1.9382288460643549,
+      "r2_mean": -0.07452523104290268,
+      "r2_std": 0.09710171378732631,
+      "pooled_mae": 15.694564058068368,
+      "pooled_rmse": 19.701615388398697,
+      "pooled_r2": -0.016646151215395033,
+      "item_mae_mean": 0.8068523997185081,
+      "overfit_gap_mae": 0.04188200754620175
+    },
+    {
+      "model": "RandomForest",
+      "mae_mean": 10.521519696208685,
+      "mae_std": 2.5542514800419447,
+      "rmse_mean": 12.702460978829858,
+      "rmse_std": 2.301047377708859,
+      "r2_mean": 0.5351382898333926,
+      "r2_std": 0.18307239866905708,
+      "pooled_mae": 10.179920330877787,
+      "pooled_rmse": 12.692402493145883,
+      "pooled_r2": 0.578056968217586,
+      "item_mae_mean": 0.6069708049008274,
+      "overfit_gap_mae": 0.3494310272554499
+    },
+    {
+      "model": "Ridge",
+      "mae_mean": 9.982947437109113,
+      "mae_std": 2.5066080963262514,
+      "rmse_mean": 12.35303845046566,
+      "rmse_std": 2.191383533874845,
+      "r2_mean": 0.5610200508459628,
+      "r2_std": 0.16235179879690365,
+      "pooled_mae": 9.891217235979514,
+      "pooled_rmse": 12.42639856117509,
+      "pooled_r2": 0.5955575751342073,
+      "item_mae_mean": 0.6366043113493156,
+      "overfit_gap_mae": 0.34542006565843447
+    },
+    {
+      "model": "XGBoost",
+      "mae_mean": 9.85199730528593,
+      "mae_std": 3.297578030934215,
+      "rmse_mean": 12.003240966492754,
+      "rmse_std": 3.261299224903667,
+      "r2_mean": 0.5725476389339123,
+      "r2_std": 0.23666058996924033,
+      "pooled_mae": 9.3297961509589,
+      "pooled_rmse": 12.106516892787617,
+      "pooled_r2": 0.6161119684333691,
+      "item_mae_mean": 0.6107742639132908,
+      "overfit_gap_mae": 0.5895778138152383
+    }
+  ],
+  "item_summary": [
+    {
+      "model": "Dummy(mean)",
+      "item": "말하기안정성",
+      "val_MAE_mean": 0.6288437438423645,
+      "val_MAE_std": 0.10778739926712858,
+      "val_R2_mean": -1.6203686631319634,
+      "train_MAE_mean": 0.5507209918707078
+    },
+    {
+      "model": "Dummy(mean)",
+      "item": "발화속도",
+      "val_MAE_mean": 0.7146195073891624,
+      "val_MAE_std": 0.13427698002455177,
+      "val_R2_mean": -0.8516790467667226,
+      "train_MAE_mean": 0.6968399105438132
+    },
+    {
+      "model": "Dummy(mean)",
+      "item": "습관어반복",
+      "val_MAE_mean": 0.8933766009852218,
+      "val_MAE_std": 0.1719418453816129,
+      "val_R2_mean": -0.1335916290527376,
+      "train_MAE_mean": 0.8334154196219272
+    },
+    {
+      "model": "Dummy(mean)",
+      "item": "시선처리",
+      "val_MAE_mean": 0.9437708866995074,
+      "val_MAE_std": 0.31887292130234546,
+      "val_R2_mean": -0.15110292326230637,
+      "train_MAE_mean": 0.8856445778155259
+    },
+    {
+      "model": "Dummy(mean)",
+      "item": "유창성침묵",
+      "val_MAE_mean": 1.0152809852216749,
+      "val_MAE_std": 0.13613604862470802,
+      "val_R2_mean": -0.11867381333157678,
+      "train_MAE_mean": 1.0080601736513868
+    },
+    {
+      "model": "Dummy(mean)",
+      "item": "자세움직임",
+      "val_MAE_mean": 0.9780071428571429,
+      "val_MAE_std": 0.14417334149543454,
+      "val_R2_mean": -0.0653636280631226,
+      "train_MAE_mean": 0.9364633201485113
+    },
+    {
+      "model": "Dummy(mean)",
+      "item": "표정자연스러움",
+      "val_MAE_mean": 0.47406793103448264,
+      "val_MAE_std": 0.15430765078364905,
+      "val_R2_mean": -0.45077903642083345,
+      "train_MAE_mean": 0.4436483515542721
+    },
+    {
+      "model": "RandomForest",
+      "item": "말하기안정성",
+      "val_MAE_mean": 0.5863386059384513,
+      "val_MAE_std": 0.0978867314265291,
+      "val_R2_mean": -1.353747422293082,
+      "train_MAE_mean": 0.2050586385667048
+    },
+    {
+      "model": "RandomForest",
+      "item": "발화속도",
+      "val_MAE_mean": 0.4192153926078541,
+      "val_MAE_std": 0.12801807374775495,
+      "val_R2_mean": 0.4122060496156961,
+      "train_MAE_mean": 0.18705358851473805
+    },
+    {
+      "model": "RandomForest",
+      "item": "습관어반복",
+      "val_MAE_mean": 0.7299089293808045,
+      "val_MAE_std": 0.18079261504900504,
+      "val_R2_mean": 0.1483292572095475,
+      "train_MAE_mean": 0.2957231121601923
+    },
+    {
+      "model": "RandomForest",
+      "item": "시선처리",
+      "val_MAE_mean": 0.7097846875120253,
+      "val_MAE_std": 0.28253765752206034,
+      "val_R2_mean": 0.279857638874731,
+      "train_MAE_mean": 0.3112544037282489
+    },
+    {
+      "model": "RandomForest",
+      "item": "유창성침묵",
+      "val_MAE_mean": 0.6839470583974571,
+      "val_MAE_std": 0.1189953238704488,
+      "val_R2_mean": 0.409584319364168,
+      "train_MAE_mean": 0.308711419084715
+    },
+    {
+      "model": "RandomForest",
+      "item": "자세움직임",
+      "val_MAE_mean": 0.7070431899191489,
+      "val_MAE_std": 0.19657177762726658,
+      "val_R2_mean": 0.3879341100929087,
+      "train_MAE_mean": 0.29483420602461513
+    },
+    {
+      "model": "RandomForest",
+      "item": "표정자연스러움",
+      "val_MAE_mean": 0.4125577705500521,
+      "val_MAE_std": 0.20927760513276056,
+      "val_R2_mean": -0.2343735611745026,
+      "train_MAE_mean": 0.20014307543842857
+    },
+    {
+      "model": "Ridge",
+      "item": "말하기안정성",
+      "val_MAE_mean": 0.6592544956425206,
+      "val_MAE_std": 0.4473456368699811,
+      "val_R2_mean": -3.2829578672269824,
+      "train_MAE_mean": 0.1953353402232905
+    },
+    {
+      "model": "Ridge",
+      "item": "발화속도",
+      "val_MAE_mean": 0.3190128939290858,
+      "val_MAE_std": 0.09192308989015027,
+      "val_R2_mean": 0.5412219982891255,
+      "train_MAE_mean": 0.1176841657419343
+    },
+    {
+      "model": "Ridge",
+      "item": "습관어반복",
+      "val_MAE_mean": 0.7661155710859102,
+      "val_MAE_std": 0.29867991959638823,
+      "val_R2_mean": -0.4220339195567025,
+      "train_MAE_mean": 0.20159012140699978
+    },
+    {
+      "model": "Ridge",
+      "item": "시선처리",
+      "val_MAE_mean": 0.7099449553959877,
+      "val_MAE_std": 0.21908533865849902,
+      "val_R2_mean": 0.2799596017001755,
+      "train_MAE_mean": 0.49543128449761015
+    },
+    {
+      "model": "Ridge",
+      "item": "유창성침묵",
+      "val_MAE_mean": 0.716087837650232,
+      "val_MAE_std": 0.07597785056647728,
+      "val_R2_mean": 0.34319074386410253,
+      "train_MAE_mean": 0.4049763523525353
+    },
+    {
+      "model": "Ridge",
+      "item": "자세움직임",
+      "val_MAE_mean": 0.7286192559579564,
+      "val_MAE_std": 0.27135948145364563,
+      "val_R2_mean": 0.4053901811134327,
+      "train_MAE_mean": 0.39312483784223656
+    },
+    {
+      "model": "Ridge",
+      "item": "표정자연스러움",
+      "val_MAE_mean": 0.5571951697835162,
+      "val_MAE_std": 0.19466286293158816,
+      "val_R2_mean": -1.1540336877100912,
+      "train_MAE_mean": 0.2301476177715612
+    },
+    {
+      "model": "XGBoost",
+      "item": "말하기안정성",
+      "val_MAE_mean": 0.7090281202316284,
+      "val_MAE_std": 0.25044259040524536,
+      "val_R2_mean": -2.5632187797219057,
+      "train_MAE_mean": 0.015096277914564004
+    },
+    {
+      "model": "XGBoost",
+      "item": "발화속도",
+      "val_MAE_mean": 0.3620098249435425,
+      "val_MAE_std": 0.04763234997944417,
+      "val_R2_mean": 0.5038541412809951,
+      "train_MAE_mean": 0.017308391651238125
+    },
+    {
+      "model": "XGBoost",
+      "item": "습관어반복",
+      "val_MAE_mean": 0.7941816281795502,
+      "val_MAE_std": 0.3133439796470838,
+      "val_R2_mean": -0.12743406004639504,
+      "train_MAE_mean": 0.024841499025598533
+    },
+    {
+      "model": "XGBoost",
+      "item": "시선처리",
+      "val_MAE_mean": 0.7225956551551819,
+      "val_MAE_std": 0.24808170787036485,
+      "val_R2_mean": 0.2394090640033149,
+      "train_MAE_mean": 0.027739667207032005
+    },
+    {
+      "model": "XGBoost",
+      "item": "유창성침묵",
+      "val_MAE_mean": 0.6266914741516113,
+      "val_MAE_std": 0.12255321583745761,
+      "val_R2_mean": 0.3778869450987797,
+      "train_MAE_mean": 0.026303830370832552
+    },
+    {
+      "model": "XGBoost",
+      "item": "자세움직임",
+      "val_MAE_mean": 0.5599045790672302,
+      "val_MAE_std": 0.18728790053719355,
+      "val_R2_mean": 0.5247433339672567,
+      "train_MAE_mean": 0.01829234167183561
+    },
+    {
+      "model": "XGBoost",
+      "item": "표정자연스러움",
+      "val_MAE_mean": 0.5010085656642914,
+      "val_MAE_std": 0.18445387817736228,
+      "val_R2_mean": -0.6383545150396734,
+      "train_MAE_mean": 0.018793142845266557
+    }
+  ],
+  "total_folds": [
+    {
+      "model": "Dummy(mean)",
+      "fold": 1,
+      "n_train": 25,
+      "n_val": 8,
+      "MAE": 14.402875000000002,
+      "RMSE": 16.535406927257643,
+      "R2": -0.02763296393452097
+    },
+    {
+      "model": "Dummy(mean)",
+      "fold": 2,
+      "n_train": 25,
+      "n_val": 8,
+      "MAE": 15.367999999999991,
+      "RMSE": 21.560725312475,
+      "R2": -0.03869557885755759
+    },
+    {
+      "model": "Dummy(mean)",
+      "fold": 3,
+      "n_train": 25,
+      "n_val": 8,
+      "MAE": 14.90075,
+      "RMSE": 18.945051174383245,
+      "R2": -0.03919991746681917
+    },
+    {
+      "model": "Dummy(mean)",
+      "fold": 4,
+      "n_train": 28,
+      "n_val": 5,
+      "MAE": 16.20966071428571,
+      "RMSE": 21.802871739570353,
+      "R2": -0.00042181596554446976
+    },
+    {
+      "model": "Dummy(mean)",
+      "fold": 5,
+      "n_train": 29,
+      "n_val": 4,
+      "MAE": 19.874827586206894,
+      "RMSE": 20.338683313135327,
+      "R2": -0.26667587899007117
+    },
+    {
+      "model": "RandomForest",
+      "fold": 1,
+      "n_train": 25,
+      "n_val": 8,
+      "MAE": 9.816488816334118,
+      "RMSE": 11.272184751279799,
+      "R2": 0.5224438424655672
+    },
+    {
+      "model": "RandomForest",
+      "fold": 2,
+      "n_train": 25,
+      "n_val": 8,
+      "MAE": 12.16454235329195,
+      "RMSE": 15.08699933771094,
+      "R2": 0.49141061405248787
+    },
+    {
+      "model": "RandomForest",
+      "fold": 3,
+      "n_train": 25,
+      "n_val": 8,
+      "MAE": 7.146979402780377,
+      "RMSE": 10.622100747357164,
+      "R2": 0.67331561933172
+    },
+    {
+      "model": "RandomForest",
+      "fold": 4,
+      "n_train": 28,
+      "n_val": 5,
+      "MAE": 8.994934705167505,
+      "RMSE": 10.64058767367097,
+      "R2": 0.7617203339692813
+    },
+    {
+      "model": "RandomForest",
+      "fold": 5,
+      "n_train": 29,
+      "n_val": 4,
+      "MAE": 14.484653203469481,
+      "RMSE": 15.890432384130413,
+      "R2": 0.22680103934790663
+    },
+    {
+      "model": "Ridge",
+      "fold": 1,
+      "n_train": 25,
+      "n_val": 8,
+      "MAE": 11.194136023599068,
+      "RMSE": 11.760104907313789,
+      "R2": 0.48020673918953316
+    },
+    {
+      "model": "Ridge",
+      "fold": 2,
+      "n_train": 25,
+      "n_val": 8,
+      "MAE": 11.95264878632297,
+      "RMSE": 15.099705164574285,
+      "R2": 0.49055361530657515
+    },
+    {
+      "model": "Ridge",
+      "fold": 3,
+      "n_train": 25,
+      "n_val": 8,
+      "MAE": 6.732608897531941,
+      "RMSE": 9.626154024692068,
+      "R2": 0.7317046467904459
+    },
+    {
+      "model": "Ridge",
+      "fold": 4,
+      "n_train": 28,
+      "n_val": 5,
+      "MAE": 7.233645215325831,
+      "RMSE": 10.576253846876291,
+      "R2": 0.7645929387023649
+    },
+    {
+      "model": "Ridge",
+      "fold": 5,
+      "n_train": 29,
+      "n_val": 4,
+      "MAE": 12.801698262765754,
+      "RMSE": 14.702974308871866,
+      "R2": 0.3380423142408955
+    },
+    {
+      "model": "XGBoost",
+      "fold": 1,
+      "n_train": 25,
+      "n_val": 8,
+      "MAE": 8.059004779458046,
+      "RMSE": 9.23236235523294,
+      "R2": 0.6796432082980375
+    },
+    {
+      "model": "XGBoost",
+      "fold": 2,
+      "n_train": 25,
+      "n_val": 8,
+      "MAE": 11.272854267656804,
+      "RMSE": 15.340676408689415,
+      "R2": 0.47416369424918936
+    },
+    {
+      "model": "XGBoost",
+      "fold": 3,
+      "n_train": 25,
+      "n_val": 8,
+      "MAE": 6.406724075078964,
+      "RMSE": 9.698362050958034,
+      "R2": 0.7276644581856453
+    },
+    {
+      "model": "XGBoost",
+      "fold": 4,
+      "n_train": 28,
+      "n_val": 5,
+      "MAE": 7.88899438714981,
+      "RMSE": 9.161555008951773,
+      "R2": 0.8233579317989834
+    },
+    {
+      "model": "XGBoost",
+      "fold": 5,
+      "n_train": 29,
+      "n_val": 4,
+      "MAE": 15.63240901708603,
+      "RMSE": 16.583249008631615,
+      "R2": 0.15790890213770536
+    }
+  ]
+}
