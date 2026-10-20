@@ -2,6 +2,7 @@
 nonverbal_language/data/
 verbal_module/data/
 verbal_module/results/
+verbal_module/interview_audio_boosted.wav
 
 # Model files
 **/*.pth

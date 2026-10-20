@@ -18,13 +18,11 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
-import math
 import os
 import subprocess
 import sys
 import time
 import traceback
-from collections import Counter
 from pathlib import Path
 
 os.environ.setdefault("RTMPOSE_CUDA_READY", "1")  # posture 모듈의 os.execv 재실행 방지
@@ -109,82 +107,16 @@ def extract_language_features(video_path: Path, audio_path: Path) -> dict:
 
 
 # ── 시선 + 표정 (프레임 1회 순회) ────────────────────────────────────────────
+# nonverbal_module/vision_features.py 로 이동 — backend 라이브 분석과 완전히 같은
+# 코드로 feature를 뽑아야 학습된 모델이 실서비스 입력에서도 의미가 있다.
 
 def extract_gaze_emotion_features(video_path: Path, sample_fps: float) -> dict:
-    from eye_tracker import _create_detector, detect_cropped_face, analyze_gaze_bs, summarize_gaze
-    from hsemotion.facial_emotions import HSEmotionRecognizer
-
-    detector = _create_detector()
-    fer = HSEmotionRecognizer(model_name="enet_b2_8", device="cuda")
-
-    cap = cv2.VideoCapture(str(video_path))
-    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    stride = max(1, int(round(fps / max(sample_fps, 0.1))))
-
-    gaze_log, emotions, emo_confs = [], [], []
-    frame_idx = sampled = face_found = 0
-
-    while cap.isOpened():
-        ok, frame = cap.read()
-        if not ok:
-            break
-        if frame_idx % stride:
-            frame_idx += 1
-            continue
-
-        sampled += 1
-        cropped, result = detect_cropped_face(frame, detector)
-
-        if result.face_landmarks and result.face_blendshapes:
-            face_found += 1
-            gaze_log.append({
-                "time": round(frame_idx / fps, 2),
-                "direction": analyze_gaze_bs(result.face_blendshapes[0]),
-            })
-            try:
-                rgb = cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB)
-                label, scores = fer.predict_emotions(rgb, logits=False)
-                emotions.append(label)
-                emo_confs.append(float(np.max(scores)))
-            except Exception:
-                pass
-
-        frame_idx += 1
-
-    cap.release()
-
-    gaze = summarize_gaze(gaze_log)
-    ratios = gaze.get("direction_ratios", {})
-    segs = gaze.get("deviated_segments", []) or []
-    seg_durs = [float(s["end"]) - float(s["start"]) for s in segs]
-
-    counts = Counter(emotions)
-    n_emo = max(len(emotions), 1)
-    probs = [c / n_emo for c in counts.values()]
-    entropy = -sum(p * math.log(p + 1e-12) for p in probs)
-    changes = sum(1 for a, b in zip(emotions, emotions[1:]) if a != b)
-
-    return {
-        "gaze_center_ratio": float(gaze.get("gaze_ratio") or 0.0),
-        "gaze_left_ratio": float(ratios.get("left") or 0.0),
-        "gaze_right_ratio": float(ratios.get("right") or 0.0),
-        "gaze_up_ratio": float(ratios.get("up") or 0.0),
-        "gaze_down_ratio": float(ratios.get("down") or 0.0),
-        "gaze_blink_ratio": float(ratios.get("blink") or 0.0),
-        "gaze_deviation_count": len(segs),
-        "gaze_deviation_mean_sec": float(np.mean(seg_durs)) if seg_durs else 0.0,
-        "gaze_deviation_max_sec": float(max(seg_durs)) if seg_durs else 0.0,
-        "face_detect_ratio": face_found / max(sampled, 1),
-        "emo_neutral_ratio": counts.get("Neutral", 0) / n_emo,
-        "emo_happy_ratio": counts.get("Happiness", 0) / n_emo,
-        "emo_negative_ratio": sum(counts.get(e, 0) for e in EMOTION_NEGATIVE) / n_emo,
-        "emo_surprise_ratio": counts.get("Surprise", 0) / n_emo,
-        "emo_entropy": float(entropy),
-        "emo_unique_count": len(counts),
-        "emo_change_rate": changes / max(len(emotions) - 1, 1),
-        "emo_mean_confidence": float(np.mean(emo_confs)) if emo_confs else 0.0,
-        "frames_sampled": sampled,
-    }
+    from vision_features import extract_gaze_emotion
+    record = extract_gaze_emotion(str(video_path), sample_fps=sample_fps, device="cuda")
+    record.pop("_gaze_summary", None)
+    record.pop("_emotion_counts", None)
+    record.pop("_expression_deductions", None)
+    return record
 
 
 # ── 자세 ─────────────────────────────────────────────────────────────────────
@@ -197,62 +129,11 @@ def _load_posture_module():
     return module
 
 
-_POSE_MODEL = None
-
-
-def extract_posture_features(video_path: Path, sample_fps: float, posture_mod) -> dict:
-    global _POSE_MODEL
-    from rtmlib import Wholebody3d
-
-    if _POSE_MODEL is None:
-        _POSE_MODEL = Wholebody3d(backend="onnxruntime", device="cuda")
-
-    cap = cv2.VideoCapture(str(video_path))
-    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    stride = max(1, int(round(fps / max(sample_fps, 0.1))))
-    analysis_fps = fps / stride
-
-    analyzer = posture_mod.PostureAnalyzer3D(
-        max(10, int(analysis_fps * 2)), max(3, int(analysis_fps * 0.4))
-    )
-    component_log = {k: [] for k in ("shoulder", "torso", "head_tilt", "forward", "drop", "rotation")}
-    frame_idx = analyzed = detected = 0
-
-    while cap.isOpened():
-        ok, frame = cap.read()
-        if not ok:
-            break
-        if frame_idx % stride:
-            frame_idx += 1
-            continue
-
-        analyzed += 1
-        keypoints_3d, scores, _, keypoints_2d = _POSE_MODEL(frame)
-        person = posture_mod.select_main_person(keypoints_2d, scores)
-        if person is not None:
-            detected += 1
-            analyzer.update(keypoints_3d[person], keypoints_2d[person], scores[person])
-            for key, value in (analyzer.components or {}).items():
-                if value is not None:
-                    component_log[key].append(value)
-
-        frame_idx += 1
-
-    cap.release()
-
-    history = analyzer.history or []
-    issue_total = max(len(history), 1)
-    out = {
-        "posture_score_mean": float(np.mean(history)) if history else float("nan"),
-        "posture_score_std": float(np.std(history)) if history else float("nan"),
-        "posture_score_min": float(np.min(history)) if history else float("nan"),
-        "posture_score_p25": float(np.percentile(history, 25)) if history else float("nan"),
-        "pose_detect_ratio": detected / max(analyzed, 1),
-    }
-    for key, values in component_log.items():
-        out[f"posture_{key}_mean"] = float(np.mean(values)) if values else float("nan")
-        out[f"posture_{key}_issue_rate"] = analyzer.issue_counts.get(key, 0) / issue_total
-    return out
+def extract_posture_features(video_path: Path, sample_fps: float, posture_mod=None) -> dict:
+    from vision_features import extract_posture
+    record = extract_posture(str(video_path), sample_fps=sample_fps, device="cuda")
+    record.pop("_posture_deductions", None)
+    return record
 
 
 # ── 드라이버 ─────────────────────────────────────────────────────────────────

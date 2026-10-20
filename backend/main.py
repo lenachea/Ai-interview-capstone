@@ -25,6 +25,7 @@ import copy
 import json
 import os
 import random
+import subprocess
 import sys
 import uuid
 import threading
@@ -45,6 +46,7 @@ from auth import (
 _BACKEND_DIR    = Path(__file__).parent
 _LANG_DIR       = _BACKEND_DIR.parent / "verbal_module"
 _NONVERBAL_DIR  = _BACKEND_DIR.parent / "nonverbal_module"
+_EVAL_MODEL_DIR = _BACKEND_DIR.parent / "eval_model"
 
 # _BACKEND_DIR 을 맨 앞에 두어 backend/main.py 가 언어모듈/main.py 보다 먼저 찾히게 함
 # _LANG_DIR 은 append — insert(0) 하면 uvicorn 리로더 subprocess가
@@ -55,8 +57,20 @@ if str(_LANG_DIR) not in sys.path:
     sys.path.append(str(_LANG_DIR))
 if str(_NONVERBAL_DIR) not in sys.path:
     sys.path.append(str(_NONVERBAL_DIR))
+if str(_EVAL_MODEL_DIR) not in sys.path:
+    sys.path.append(str(_EVAL_MODEL_DIR))
+
+# .env(OPENAI_API_KEY 등)를 서버 기동 시점에 로드 — 분석 플로우뿐 아니라
+# 개선 레퍼런스 이미지 엔드포인트에서도 키가 필요하다.
+try:
+    from dotenv import load_dotenv
+    load_dotenv(str(_LANG_DIR / ".env"))
+except ImportError:
+    pass
 
 from scorer import calc_scores, aggregate_scores
+from deep_report import generate_deep_report
+from corrected_frame import get_corrected_reference, CHANGES as CORRECTION_GROUPS
 from questions import QUESTION_CATEGORIES, SESSION_QUESTION_COUNT
 import preprocessor
 
@@ -230,6 +244,51 @@ def _aggregate(seg_results: list) -> dict:
     }
 
 
+# ── ML 평가모델(eval_model) 점수 계산 ────────────────────────────────────────
+
+# 채점표 7개 항목 → 프론트엔드 7-key 스코어 스키마 매핑 (1:1, 병합 없음).
+# 표정은 eval_model에 항목이 하나뿐이라 "표정안정성" 하나로만 노출한다.
+def _ml_pred_to_scores(ml_pred: dict) -> dict:
+    items = ml_pred["items"]
+    return {
+        "발화속도":     items["말속도"]["score_0to100"],
+        "음성명확성":   items["명확성"]["score_0to100"],
+        "유창성침묵":   items["침묵"]["score_0to100"],
+        "습관어":       items["습관어"]["score_0to100"],
+        "시선처리":     items["시선비율"]["score_0to100"],
+        "표정안정성":   items["표정"]["score_0to100"],
+        "자세안정성":   items["상반신자세"]["score_0to100"],
+        "총점":         ml_pred["총점"],
+    }
+
+
+def _compute_ml_scores(agg_lang: dict, nonverbal_result: dict) -> Optional[dict]:
+    """
+    eval_model(36개 모의면접 영상으로 학습한 RandomForest)로 총점/항목 점수를 예측합니다.
+    비전 raw feature나 학습된 모델 파일이 없으면 None을 반환 — 호출부는 이 경우
+    scorer.py의 휴리스틱 규칙 기반 점수를 그대로 씁니다(fallback).
+    """
+    try:
+        raw_vision = (nonverbal_result or {}).get("raw_features") or {}
+        if not raw_vision:
+            return None
+
+        from inference import is_ready, predict_scores
+        from feature_adapter import combine
+
+        if not is_ready():
+            print("[ML Scoring] eval_model/models/ 없음 — train_final_model.py 먼저 실행 필요")
+            return None
+
+        features = combine(raw_vision, agg_lang)
+        ml_pred = predict_scores(features)
+        ml_pred["scores"] = _ml_pred_to_scores(ml_pred)
+        return ml_pred
+    except Exception as e:
+        print(f"[ML Scoring] 실패, 휴리스틱 점수 사용: {e}")
+        return None
+
+
 # ── STT 교정 (표시 전용) ─────────────────────────────────────────────────────
 
 def _correct_transcript(text: str) -> str:
@@ -284,6 +343,7 @@ def _run_analysis(job_id: str, video_path: Path, filename: str):
         agg_lang              = {}
         nonverbal_result      = {}
         overall_scores        = {}
+        ml_pred               = None
         corrected_transcript  = ""
         status                = "failed"
         error                 = ""
@@ -337,16 +397,17 @@ def _run_analysis(job_id: str, video_path: Path, filename: str):
 
             print(f"[Pipeline] 답변 수: {len(answer_segs)}")
 
-            # ─── 5. 비언어 분석 (프레임 기반) ────────────────────────────
-            if frames_count > 0:
-                print("[Vision] 비전 분석 시작...")
-                try:
-                    nonverbal_result = nonverbal_api.analyze_nonverbal(str(frames_dir))
-                    print(f"[Vision] 완료 — status: {nonverbal_result.get('status')}")
-                    if nonverbal_result.get("errors"):
-                        print(f"[Vision] 부분 오류: {nonverbal_result['errors']}")
-                except Exception as e:
-                    print(f"[Vision] 분석 실패: {e}")
+            # ─── 5. 비언어 분석 (영상에서 직접 샘플링) ────────────────────
+            # frames_dir(1fps 썸네일용 JPEG)와 별개로, 영상 파일을 직접 읽어
+            # eval_model 학습 때와 동일한 코드(vision_features.py)로 시선/표정/자세를 분석한다.
+            print("[Vision] 비전 분석 시작...")
+            try:
+                nonverbal_result = nonverbal_api.analyze_nonverbal(str(video_path))
+                print(f"[Vision] 완료 — status: {nonverbal_result.get('status')}")
+                if nonverbal_result.get("errors"):
+                    print(f"[Vision] 부분 오류: {nonverbal_result['errors']}")
+            except Exception as e:
+                print(f"[Vision] 분석 실패: {e}")
 
             # ─── 6. 답변별 언어 분석 ─────────────────────────────────────
             for seg in answer_segs:
@@ -376,6 +437,12 @@ def _run_analysis(job_id: str, video_path: Path, filename: str):
                 nonverbal_analysis=nv,
             )
 
+            # ─── 7.5. eval_model(ML) 점수 — 되면 휴리스틱 점수를 대체 ──────
+            ml_pred = _compute_ml_scores(agg_lang, nonverbal_result)
+            if ml_pred:
+                print(f"[ML Scoring] 성공 — 총점 {ml_pred['총점']}")
+                overall_scores = ml_pred["scores"]
+
             # ─── 8. 표시용 텍스트 교정 (분석 데이터와 분리) ──────────────
             raw_transcript = agg_lang.get("raw_data", {}).get("transcript", "")
             if raw_transcript:
@@ -399,6 +466,7 @@ def _run_analysis(job_id: str, video_path: Path, filename: str):
         "error":                error,
         "language_analysis":    agg_lang,
         "nonverbal_analysis":   nonverbal_result,
+        "ml_scores":            ml_pred,
         "corrected_transcript": corrected_transcript,
         "answers":              seg_results,
         "scores":               overall_scores,
@@ -433,6 +501,7 @@ def _run_realtime_analysis(job_id: str):
         agg_lang              = {}
         nonverbal_result      = {}
         overall_scores        = {}
+        ml_pred               = None
         corrected_transcript  = ""
         status                = "failed"
         error                 = ""
@@ -476,14 +545,13 @@ def _run_realtime_analysis(job_id: str):
             full_text, words_info, segments_info = lang_api.transcribe_file(str(audio_path))
             print(f"[STT] 완료 — 단어 {len(words_info)}개")
 
-            # ─── 4. 비언어 분석 (프레임 기반) ────────────────────────────
-            if frames_count > 0:
-                print("[Vision] 비전 분석 시작...")
-                try:
-                    nonverbal_result = nonverbal_api.analyze_nonverbal(str(frames_dir))
-                    print(f"[Vision] 완료 — status: {nonverbal_result.get('status')}")
-                except Exception as e:
-                    print(f"[Vision] 분석 실패: {e}")
+            # ─── 4. 비언어 분석 (영상에서 직접 샘플링) ────────────────────
+            print("[Vision] 비전 분석 시작...")
+            try:
+                nonverbal_result = nonverbal_api.analyze_nonverbal(str(video_path))
+                print(f"[Vision] 완료 — status: {nonverbal_result.get('status')}")
+            except Exception as e:
+                print(f"[Vision] 분석 실패: {e}")
 
             # ─── 5. 질문별(타임스탬프 구간) 언어 분석 ────────────────────
             for ts in sorted(meta["timestamps"], key=lambda t: t["index"]):
@@ -512,6 +580,12 @@ def _run_realtime_analysis(job_id: str):
                 nonverbal_analysis=nv,
             )
 
+            # ─── 6.5. eval_model(ML) 점수 — 되면 휴리스틱 점수를 대체 ──────
+            ml_pred = _compute_ml_scores(agg_lang, nonverbal_result)
+            if ml_pred:
+                print(f"[ML Scoring] 성공 — 총점 {ml_pred['총점']}")
+                overall_scores = ml_pred["scores"]
+
             raw_transcript = agg_lang.get("raw_data", {}).get("transcript", "")
             if raw_transcript:
                 print("[Transcript] GPT 교정 중...")
@@ -536,6 +610,7 @@ def _run_realtime_analysis(job_id: str):
         "videotype":            videotype,
         "language_analysis":    agg_lang,
         "nonverbal_analysis":   nonverbal_result,
+        "ml_scores":            ml_pred,
         "corrected_transcript": corrected_transcript,
         "answers":              seg_results,
         "scores":               overall_scores,
@@ -726,6 +801,46 @@ def get_results(job_id: str):
     raise HTTPException(404, "Job not found")
 
 
+_deep_report_locks: dict[str, threading.Lock] = {}
+_deep_report_locks_guard = threading.Lock()
+
+
+@app.get("/deep-report/{job_id}")
+def get_deep_report(job_id: str):
+    """
+    음성·비전 특징 전용 심층 리포트. 결과 화면에서 필요할 때 생성하며 GPT 호출 2회라
+    처리에 1~2분 걸릴 수 있습니다. 같은 스키마 버전으로 한 번 생성된 결과는 해당
+    job에 캐시되어 재호출 시 즉시 반환됩니다.
+    """
+    db = _load_db()
+    job = next((e for e in db if e["job_id"] == job_id), None)
+    if job is None:
+        raise HTTPException(404, "Job not found")
+    if job.get("status") != "completed":
+        raise HTTPException(409, "분석이 아직 완료되지 않았습니다")
+
+    if (job.get("deep_report") or {}).get("report_version") == 4:
+        return job["deep_report"]
+
+    with _deep_report_locks_guard:
+        lock = _deep_report_locks.setdefault(job_id, threading.Lock())
+
+    with lock:
+        # 락 대기 중 다른 요청이 먼저 만들어놨을 수 있으니 다시 확인
+        db = _load_db()
+        job = next((e for e in db if e["job_id"] == job_id), None)
+        if (job.get("deep_report") or {}).get("report_version") == 4:
+            return job["deep_report"]
+
+        report = generate_deep_report(job)
+        if report is None:
+            raise HTTPException(503, "심층 리포트를 생성할 수 없습니다 (API 키/생성 실패)")
+
+        job["deep_report"] = report
+        _upsert(job)
+        return report
+
+
 @app.get("/history")
 def get_history(authorization: Optional[str] = Header(default=None)):
     """완료된 분석 기록 (최신순). admin은 전체, 일반 유저는 본인 것만."""
@@ -743,21 +858,31 @@ def get_history(authorization: Optional[str] = Header(default=None)):
 
 
 @app.get("/compare/{job_id}")
-def compare_results(job_id: str):
-    """현재 분석과 직전 분석 비교"""
-    db        = _load_db()
-    completed = sorted([e for e in db if e["status"] == "completed"],
-                       key=lambda x: x["timestamp"])
-
-    current = previous = None
-    for i, e in enumerate(completed):
-        if e["job_id"] == job_id:
-            current  = e
-            previous = completed[i - 1] if i > 0 else None
-            break
-
+def compare_results(job_id: str, authorization: Optional[str] = Header(default=None)):
+    """현재 업로드 분석을 같은 사용자의 가장 최근 이전 분석과 비교한다."""
+    user = _get_current_user(authorization)
+    db = _load_db()
+    current = next(
+        (entry for entry in db if entry.get("job_id") == job_id and entry.get("status") == "completed"),
+        None,
+    )
     if current is None:
         raise HTTPException(404, "Job not found or not completed")
+
+    is_admin = bool(user and user.get("role") == "admin")
+    if not is_admin and (not user or current.get("username") != user.get("sub")):
+        raise HTTPException(403, "본인의 분석 기록만 비교할 수 있습니다")
+
+    owner = current.get("username")
+    candidates = [
+        entry for entry in db
+        if entry.get("status") == "completed"
+        and entry.get("job_id") != job_id
+        and entry.get("username") == owner
+        and entry.get("timestamp", "") < current.get("timestamp", "")
+        and not entry.get("videotype")
+    ]
+    previous = max(candidates, key=lambda entry: entry.get("timestamp", ""), default=None)
 
     diff: dict = {}
     if previous:
@@ -795,6 +920,133 @@ def serve_audio_clip(
             "Cache-Control": "max-age=3600",
             "Content-Length": str(len(clip)),
             "Accept-Ranges": "bytes",
+        },
+    )
+
+
+def _resolve_video_path(job_id: str) -> Path:
+    """업로드(/analyze)/실시간(/realtime) 두 플로우 모두에서 원본 영상 파일 경로를 찾습니다."""
+    job_dir = JOBS_DIR / job_id
+    # job_id가 ".." 같은 값이면 jobs/ 밖의 디렉터리를 가리킬 수 있으므로 차단
+    if job_dir.resolve().parent != JOBS_DIR.resolve():
+        raise HTTPException(404, "Job not found")
+    meta_path = job_dir / "realtime_meta.json"
+    if meta_path.exists():
+        meta = _load_realtime_meta(job_dir)
+        return job_dir / meta.get("video_filename", "video.webm")
+
+    matches = sorted(job_dir.glob("original.*"))
+    if matches:
+        return matches[0]
+    raise HTTPException(404, "영상 파일을 찾을 수 없습니다")
+
+
+def _extract_frame_jpeg(video_path: Path, t: float) -> bytes:
+    """영상의 t초 지점 프레임 하나를 JPEG bytes로 추출합니다."""
+    proc = subprocess.run(
+        ["ffmpeg", "-ss", f"{max(0.0, t):.3f}", "-i", str(video_path),
+         "-frames:v", "1", "-q:v", "3", "-f", "image2", "-vcodec", "mjpeg", "pipe:1"],
+        capture_output=True,
+    )
+    if proc.returncode != 0 or not proc.stdout:
+        raise HTTPException(500, f"프레임 추출 실패: {proc.stderr.decode(errors='ignore')[:300]}")
+    return proc.stdout
+
+
+@app.get("/frame/{job_id}")
+def serve_frame(job_id: str, t: float = 0.0):
+    """
+    지정 시각(t초)의 영상 프레임 하나를 JPEG로 반환합니다.
+    비전 분석(표정/시선/자세) 타임라인 구간을 클릭했을 때 실제 장면을 보여주는 용도.
+    """
+    video_path = _resolve_video_path(job_id)
+    if not video_path.exists():
+        raise HTTPException(404, "영상 파일을 찾을 수 없습니다")
+
+    return Response(
+        content=_extract_frame_jpeg(video_path, t),
+        media_type="image/jpeg",
+        headers={"Cache-Control": "max-age=3600"},
+    )
+
+
+def _representative_problem_times(job: dict, group: str) -> list[float]:
+    """각 비전 항목의 대표 장면을 최대 두 개 고른다.
+
+    자세 문제가 감지되지 않은 기록은 버튼을 숨기지 않고, 답변 구간의 1/3과
+    2/3 지점을 안정적인 자세의 대표 장면으로 사용한다.
+    """
+    nv = job.get("nonverbal_analysis", {}) or {}
+    if group in ("gaze", "expression"):
+        key = "gaze_deductions" if group == "gaze" else "expression_deductions"
+        segments = sorted(
+            nv.get(key, []) or [],
+            key=lambda item: float(item.get("end", 0)) - float(item.get("start", 0)),
+            reverse=True,
+        )
+        candidates = [
+            (float(item.get("start", 0)) + float(item.get("end", item.get("start", 0)))) / 2
+            for item in segments
+        ]
+    else:
+        points = sorted(
+            nv.get("posture_deductions", []) or [],
+            key=lambda item: float(item.get("confidence", 0)),
+            reverse=True,
+        )
+        candidates = [float(item.get("sec", 0)) for item in points]
+        if not candidates:
+            duration = max(
+                (float(answer.get("end", 0) or 0) for answer in (job.get("answers", []) or [])),
+                default=0.0,
+            )
+            if duration > 0:
+                candidates = [duration / 3, duration * 2 / 3]
+
+    selected: list[float] = []
+    for candidate in candidates:
+        # 연속 샘플로 사실상 같은 화면이 두 번 선택되는 것을 막는다.
+        if all(abs(candidate - existing) >= 1.5 for existing in selected):
+            selected.append(round(max(0.0, candidate), 2))
+        if len(selected) == 2:
+            break
+    return selected
+
+
+@app.get("/improvement-reference/{job_id}/{group}")
+def serve_improvement_reference(job_id: str, group: str):
+    """대표 문제 장면 두 개를 참고해 만든 항목별 개선 레퍼런스 이미지 한 장을 반환한다."""
+    if group not in CORRECTION_GROUPS:
+        raise HTTPException(404, f"알 수 없는 group: {group}")
+
+    db = _load_db()
+    job = next((entry for entry in db if entry.get("job_id") == job_id), None)
+    if job is None:
+        raise HTTPException(404, "Job not found")
+
+    times = _representative_problem_times(job, group)
+    if not times:
+        raise HTTPException(404, "해당 항목의 문제 구간이 없습니다")
+
+    video_path = _resolve_video_path(job_id)
+    if not video_path.exists():
+        raise HTTPException(404, "영상 파일을 찾을 수 없습니다")
+
+    path = get_corrected_reference(
+        JOBS_DIR / job_id,
+        group,
+        times,
+        get_frames=lambda: [_extract_frame_jpeg(video_path, time) for time in times],
+    )
+    if path is None or not path.exists():
+        raise HTTPException(503, "개선 레퍼런스 이미지를 생성할 수 없습니다")
+
+    return FileResponse(
+        str(path),
+        media_type="image/png",
+        headers={
+            "Cache-Control": "max-age=86400",
+            "X-Problem-Times": ",".join(str(time) for time in times),
         },
     )
 

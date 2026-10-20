@@ -1,0 +1,41 @@
+{
+  "targets": {
+    "말속도": {
+      "report_name": "발화속도",
+      "weight": 15
+    },
+    "명확성": {
+      "report_name": "말하기안정성",
+      "weight": 15
+    },
+    "침묵": {
+      "report_name": "유창성침묵",
+      "weight": 15
+    },
+    "습관어": {
+      "report_name": "습관어반복",
+      "weight": 10
+    },
+    "시선비율": {
+      "report_name": "시선처리",
+      "weight": 15
+    },
+    "표정": {
+      "report_name": "표정자연스러움",
+      "weight": 15
+    },
+    "상반신자세": {
+      "report_name": "자세움직임",
+      "weight": 15
+    }
+  },
+  "score_scale": {
+    "min": 1,
+    "max": 5
+  },
+  "total_scale": {
+    "min": 0,
+    "max": 100
+  },
+  "note": "총점 = Σ ((항목점수 - score_scale.min) / (score_scale.max - score_scale.min)) * weight"
+}

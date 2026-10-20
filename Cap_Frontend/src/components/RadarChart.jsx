@@ -12,7 +12,7 @@ import { Radar } from 'react-chartjs-2'
 ChartJS.register(RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend)
 
 export default function RadarChart({ scores }) {
-  const labels = ['표정 안정성', '표정 다양성', '자세 안정성', '시선 처리', '발화 속도', '말하기 명확성']
+  const labels = ['발화 속도', '음성 명확성', '유창성·침묵', '습관어', '시선 처리', '표정 안정성', '자세 안정성']
 
   const data = {
     labels,

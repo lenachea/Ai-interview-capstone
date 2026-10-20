@@ -58,32 +58,36 @@ def detect_cropped_face(frame, detector, padding=FACE_CROP_PADDING):
         return frame, initial_result
     return cropped, crop_result
 
-def analyze_gaze_bs(blendshapes):
-    """Blendshape 기반 시선 분석"""
+def gaze_signals(blendshapes):
+    """
+    blendshape → {up, down, left, right, blink} 원본 신호(0~1 근처).
+    분류(threshold) 없이 순수 신호만 반환 — baseline 보정(calibrate_gaze_log)에 사용.
+    """
     bs = {b.category_name: b.score for b in blendshapes}
-
-    # 깜빡임
-    blink = (bs.get("eyeBlinkLeft", 0) + bs.get("eyeBlinkRight", 0)) / 2
-    if blink > 0.5:
-        return "blink"
-
-    # 상하
-    look_up   = (bs.get("eyeLookUpLeft", 0)   + bs.get("eyeLookUpRight", 0))   / 2
-    look_down = (bs.get("eyeLookDownLeft", 0) + bs.get("eyeLookDownRight", 0)) / 2
-
-    # 좌우 (eyeLookIn/Out은 각 눈 기준이라 교차 적용)
-    look_left  = (bs.get("eyeLookOutRight", 0) + bs.get("eyeLookInLeft", 0))  / 2
-    look_right = (bs.get("eyeLookOutLeft", 0)  + bs.get("eyeLookInRight", 0)) / 2
-
-    scores = {
-        "up":    look_up,
-        "down":  look_down,
-        "left":  look_left,
-        "right": look_right,
+    return {
+        "up":    (bs.get("eyeLookUpLeft", 0)   + bs.get("eyeLookUpRight", 0))   / 2,
+        "down":  (bs.get("eyeLookDownLeft", 0) + bs.get("eyeLookDownRight", 0)) / 2,
+        # 좌우: eyeLookIn/Out은 각 눈 기준이라 교차 적용
+        "left":  (bs.get("eyeLookOutRight", 0) + bs.get("eyeLookInLeft", 0))  / 2,
+        "right": (bs.get("eyeLookOutLeft", 0)  + bs.get("eyeLookInRight", 0)) / 2,
+        "blink": (bs.get("eyeBlinkLeft", 0) + bs.get("eyeBlinkRight", 0)) / 2,
     }
-    max_dir   = max(scores, key=scores.get)
 
-    max_score = scores[max_dir]
+
+def analyze_gaze_bs(blendshapes):
+    """
+    Blendshape 기반 시선 분석 (절대 threshold, baseline 보정 없음).
+
+    ⚠️ 사람마다/카메라 각도마다 정면을 봐도 특정 방향의 기본값이 높게 나올 수 있음
+    (예: 안경 쓴 사람은 정면에서도 eyeLookInRight가 0.3~0.4로 높게 나와 계속 "right"로
+    잘못 분류되는 경우 실측 확인됨). 라이브 분석(vision_features.py)은 이 함수 대신
+    calibrate_gaze_log()로 영상 전체의 baseline을 잡고 상대적으로 판정한다.
+    이 함수는 프레임 1장만 볼 수 있는 기존 호출부(하위호환)용으로 남겨둔다.
+    """
+    signals = gaze_signals(blendshapes)
+
+    if signals["blink"] > 0.5:
+        return "blink"
 
     THRESHOLD = {
         "up":    0.15,
@@ -92,13 +96,59 @@ def analyze_gaze_bs(blendshapes):
         "right": 0.25,
     }
 
+    max_dir = max(("up", "down", "left", "right"), key=lambda k: signals[k])
+    max_score = signals[max_dir]
+
     # up이 임계값을 넘으면 다른 방향보다 높아도 up 우선
-    if look_up >= THRESHOLD["up"]:
+    if signals["up"] >= THRESHOLD["up"]:
         return "up"
 
     if max_score < THRESHOLD[max_dir]:
         return "center"
     return max_dir
+
+
+def calibrate_gaze_log(timed_signals, threshold=0.15, blink_threshold=0.5):
+    """
+    프레임별 gaze_signals()를 모아, 영상 전체의 중앙값을 "정면 baseline"으로 잡고
+    거기서 벗어난 정도로 방향을 재분류한다.
+
+    Parameters
+    ----------
+    timed_signals : list[(time, signals_dict)]
+        gaze_signals()의 시간별 기록 (깜빡임 프레임도 포함해서 넘기면 됨 — 여기서 제외 처리).
+    threshold : float
+        baseline 대비 이 값 이상 벗어나야 해당 방향으로 판정 (모든 방향 동일 적용).
+
+    Returns
+    -------
+    list[{"time": float, "direction": str}]
+        analyze_frames_gaze()가 만들던 gaze_log와 동일한 형태.
+    """
+    axes = ("up", "down", "left", "right")
+    non_blink = [s for _, s in timed_signals if s["blink"] <= blink_threshold]
+
+    if not non_blink:
+        baseline = {k: 0.0 for k in axes}
+    else:
+        baseline = {
+            k: float(np.median([s[k] for s in non_blink]))
+            for k in axes
+        }
+
+    gaze_log = []
+    for t, s in timed_signals:
+        if s["blink"] > blink_threshold:
+            gaze_log.append({"time": t, "direction": "blink"})
+            continue
+
+        adjusted = {k: max(0.0, s[k] - baseline[k]) for k in axes}
+        max_dir = max(axes, key=lambda k: adjusted[k])
+
+        direction = max_dir if adjusted[max_dir] >= threshold else "center"
+        gaze_log.append({"time": t, "direction": direction})
+
+    return gaze_log
 
 def analyze_video_gaze(video_path):
     cap = cv2.VideoCapture(video_path)
@@ -170,7 +220,13 @@ def analyze_frames_gaze(frames_dir, fps=30, img_ext="*.jpg"):
 
     return gaze_log
 
-def summarize_gaze(gaze_log):
+def summarize_gaze(gaze_log, min_blink_duration=0.6):
+    """
+    min_blink_duration : 초. 이보다 짧은 "blink" 구간은 정상적인 눈 깜빡임으로 보고
+        deviated_segments(타임라인/감점 구간)에서 제외한다. 여러 프레임에 걸쳐
+        연속으로 감지된(=일정 시간 이상 눈을 감고 있거나 실눈을 뜬) 경우만 문제로 본다.
+        left/right/up/down 이탈은 그대로 전부 포함(짧아도 의미 있는 신호).
+    """
     total = len(gaze_log)
     if total == 0:
         return {}
@@ -202,6 +258,11 @@ def summarize_gaze(gaze_log):
             "end": gaze_log[-1]["time"],
             "direction": gaze_log[-1]["direction"]
         })
+
+    deviated_segments = [
+        s for s in deviated_segments
+        if not (s["direction"] == "blink" and (s["end"] - s["start"]) < min_blink_duration)
+    ]
 
     if center_ratio >= 0.8:
         feedback = "시선 처리 안정적"

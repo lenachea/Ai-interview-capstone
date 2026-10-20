@@ -5,12 +5,13 @@ import styles from '../styles/ResultsOverview.module.css'
 
 // 레이더 차트 항목 순서 (RadarChart labels와 동일하게 유지)
 const SCORE_LABELS = [
-  { key: '표정안정성',   label: '표정 안정성',   color: '#50eba0' },
-  { key: '표정다양성',   label: '표정 다양성',   color: '#5BB8F5' },
-  { key: '자세안정성',   label: '자세 안정성',   color: '#50eba0' },
-  { key: '시선처리',     label: '시선 처리',     color: '#5BB8F5' },
-  { key: '발화속도',     label: '발화 속도',     color: '#50eba0' },
-  { key: '말하기안정성', label: '말하기 안정성', color: '#5BB8F5' },
+  { key: '발화속도',   label: '발화 속도',    color: '#50eba0' },
+  { key: '음성명확성', label: '음성 명확성',  color: '#5BB8F5' },
+  { key: '유창성침묵', label: '유창성·침묵',  color: '#50eba0' },
+  { key: '습관어',     label: '습관어',       color: '#5BB8F5' },
+  { key: '시선처리',   label: '시선 처리',    color: '#50eba0' },
+  { key: '표정안정성', label: '표정 안정성',  color: '#5BB8F5' },
+  { key: '자세안정성', label: '자세 안정성',  color: '#50eba0' },
 ]
 
 function getGrade(score) {

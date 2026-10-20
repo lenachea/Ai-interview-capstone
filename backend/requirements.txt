@@ -4,3 +4,11 @@ python-multipart>=0.0.9
 soundfile>=0.12.1
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
+
+# eval_model(ML 평가모델) 추론용 — backend/main.py의 _compute_ml_scores가 사용.
+# 비전 feature 추출(mediapipe/hsemotion/rtmlib/onnxruntime-gpu 등)은 여기 없음 —
+# nonverbal_module 쪽 무거운 GPU 의존성은 eval_model/scripts/setup_env.sh 참고,
+# 아직 Dockerfile에는 반영되지 않았음.
+scikit-learn>=1.5.0
+joblib>=1.4.0
+pandas>=2.2.0
