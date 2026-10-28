@@ -50,6 +50,14 @@ const GUIDANCE_ITEMS = [
 ]
 // ─────────────────────────────────────────────────────────────────────
 
+// ── 자세 가이드 오버레이 이미지 ─────────────────────────────────────
+// 웹캠 화면 위에 반투명으로 겹쳐 보이는 "이 위치에 맞춰 앉으세요" 그림입니다.
+// 그림을 바꾸려면: Cap_Frontend/public/posture-guide.png 파일을 같은 이름으로 교체하세요.
+//   (다른 파일명/경로를 쓰려면 아래 경로를 수정, 오버레이를 끄려면 null로 설정)
+// 투명도·크기·위치는 styles/RealtimeSetup.module.css 의 .postureGuide 에서 조절합니다.
+const POSTURE_GUIDE_SRC = '/posture-guide.png'
+// ─────────────────────────────────────────────────────────────────────
+
 export default function RealtimeSetup() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -236,7 +244,13 @@ export default function RealtimeSetup() {
 
               <div className={styles.videoWrap}>
                 {cameraStatus === 'granted' ? (
-                  <video ref={videoRef} autoPlay muted playsInline className={styles.video} />
+                  <>
+                    <video ref={videoRef} autoPlay muted playsInline className={styles.video} />
+                    {POSTURE_GUIDE_SRC && (
+                      <img src={POSTURE_GUIDE_SRC} alt="자세 가이드" className={styles.postureGuide} />
+                    )}
+                    <span className={styles.postureGuideHint}>그림에 맞춰 자세를 잡아주세요</span>
+                  </>
                 ) : (
                   <div className={styles.videoPlaceholder}>
                     <svg viewBox="0 0 48 48" fill="none">

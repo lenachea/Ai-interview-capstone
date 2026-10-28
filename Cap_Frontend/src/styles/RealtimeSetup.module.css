@@ -218,7 +218,33 @@ position: absolute;
 }
 
 /* ── 웹캠 ── */
+/* 자세 가이드 오버레이 (이미지: public/posture-guide.png) */
+.postureGuide {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 92%;          /* 크기 조절 */
+  width: auto;
+  opacity: 0.55;        /* 투명도 조절 (0~1) */
+  pointer-events: none;
+}
+
+.postureGuideHint {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 12px;
+  pointer-events: none;
+}
+
 .videoWrap {
+  position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
   background: #1a1a1a;
